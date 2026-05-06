@@ -6,6 +6,13 @@ class DisponibiliteSerializer(serializers.ModelSerializer):
         model = Disponibilite
         fields = '__all__'
 
+    def validate(self, data):
+        if data['heure_fin'] <= data['heure_debut']:
+            raise serializers.ValidationError(
+                "L'heure de fin doit être supérieure à l'heure de début."
+            )
+        return data
+
 class MedecinSimpleSerializer(serializers.ModelSerializer):
     """Serializer simplifié pour éviter la récursion dans CentreSanteSerializer"""
     class Meta:
@@ -32,10 +39,24 @@ class CentreSanteSerializer(serializers.ModelSerializer):
             'medecins',
         ]
 
-class MedecinSerializer(serializers.ModelSerializer):
-    centre_detail = CentreSanteSerializer(source='centre', read_only=True)
+class CentreSimpleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CentreSante
+        fields = ['id', 'nom', 'ville', 'adresse', 'telephone']
 
-    disponibilites = DisponibiliteSerializer(
+class DisponibiliteSimpleSerializer(serializers.ModelSerializer):
+
+
+    class Meta:
+        model = Disponibilite
+        fields = ['id', 'jour', 'heure_debut', 'heure_fin']
+
+
+
+class MedecinSerializer(serializers.ModelSerializer):
+    centre_detail = CentreSimpleSerializer(source='centre', read_only=True)
+
+    disponibilites = DisponibiliteSimpleSerializer(
         source='disponibilite_set',
         many=True,
         read_only=True
