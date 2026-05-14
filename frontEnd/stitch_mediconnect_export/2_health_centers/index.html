@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MediConnect - Health Centers</title>
+<!-- Google Fonts: Manrope -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#adc7ff",
+                        "surface-variant": "#e1e3e4",
+                        "tertiary-container": "#6b786e",
+                        "surface-container-highest": "#e1e3e4",
+                        "inverse-primary": "#adc7ff",
+                        "secondary-container": "#5ce9fe",
+                        "primary": "#0059bb",
+                        "surface-container": "#edeeef",
+                        "primary-container": "#0070ea",
+                        "outline-variant": "#c1c6d7",
+                        "surface": "#f8f9fa",
+                        "on-tertiary-container": "#f6fff5",
+                        "surface-bright": "#f8f9fa",
+                        "tertiary-fixed-dim": "#bdcabe",
+                        "on-secondary-fixed": "#001f24",
+                        "on-secondary-fixed-variant": "#004f58",
+                        "on-background": "#191c1d",
+                        "surface-dim": "#d9dadb",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#3e4a41",
+                        "secondary-fixed": "#98f0ff",
+                        "on-surface": "#191c1d",
+                        "error-container": "#ffdad6",
+                        "secondary": "#006874",
+                        "inverse-surface": "#2e3132",
+                        "on-surface-variant": "#414754",
+                        "tertiary-fixed": "#d9e6da",
+                        "surface-container-low": "#f3f4f5",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#005bc0",
+                        "on-primary-container": "#fefcff",
+                        "outline": "#717786",
+                        "on-tertiary-fixed": "#131e17",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#001a41",
+                        "surface-container-high": "#e7e8e9",
+                        "primary-fixed": "#d8e2ff",
+                        "background": "#f8f9fa",
+                        "tertiary": "#535f56",
+                        "inverse-on-surface": "#f0f1f2",
+                        "on-primary-fixed-variant": "#004493",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#45d8ed",
+                        "on-secondary-container": "#006773",
+                        "on-primary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "base": "8px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "container-padding": "20px",
+                        "xs": "4px",
+                        "sm": "12px",
+                        "xl": "32px"
+                    },
+                    "fontFamily": {
+                        "h3": ["Manrope"],
+                        "body-md": ["Manrope"],
+                        "body-sm": ["Manrope"],
+                        "body-lg": ["Manrope"],
+                        "label-md": ["Manrope"],
+                        "h1": ["Manrope"],
+                        "label-sm": ["Manrope"],
+                        "h2": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "h3": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+                        "h1": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "h2": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar to maintain clean aesthetic */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e1e3e4;
+            border-radius: 4px;
+        }
+        /* Safe area padding for mobile */
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased min-h-screen flex flex-col font-body-md text-body-md">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-container-padding h-16 w-full max-w-md mx-auto bg-surface-container-lowest full-width top-0 sticky border-b border-surface-container z-40 shadow-sm shadow-primary/5">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center overflow-hidden shrink-0">
+<img alt="User Profile Avatar" class="w-full h-full object-cover" data-alt="A professional headshot of a person looking directly at the camera with a subtle, friendly smile. The lighting is bright and even, set against a solid, light neutral background that aligns with a clean, clinical aesthetic. The individual is dressed in modern, understated smart-casual attire." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjitx7kaE4y-IAFz1DCNdSNh1faYqKoVvp7NeAKhMUzFfN6nt2XFmLneVA3_xve_5pW3t_SofM5ryE057rXwqnvt97Cdbz5a1SRmpa03PeEe8X8F3COgFwsIUJLO6f94BBawTvCPKVP2_Re1l6iuZCOcogKACqxZwtfSyTzbTbRwSYtceAn-OjYgxS4bgz7p6oI1HIRABnjtvAGtI3w8R-2Qwc9dZVH1-k-WxGnJUIDA86x2avpmv0BerT79dcyLcGeLvxuDdKUmI"/>
+</div>
+<div class="font-h3 text-h3 text-primary font-bold">
+            MediConnect
+        </div>
+<button aria-label="Notifications" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-md mx-auto px-container-padding pt-lg pb-[100px] flex flex-col gap-lg">
+<!-- Search & Filter -->
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline">search</span>
+</div>
+<input class="w-full pl-xl pr-md py-sm bg-surface-container-low border border-transparent rounded-xl focus:border-primary focus:bg-surface-container-lowest focus:ring-0 transition-colors font-body-md text-body-md text-on-surface placeholder:text-outline-variant outline-none" placeholder="Search clinics, hospitals..." type="text"/>
+</div>
+<!-- Section Header -->
+<div class="flex justify-between items-end">
+<h1 class="font-h2 text-h2 text-on-surface">Nearby Centers</h1>
+<button class="font-label-md text-label-md text-primary flex items-center hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-[18px] mr-xs">tune</span> Filters
+            </button>
+</div>
+<!-- Centers List -->
+<div class="flex flex-col gap-md">
+<!-- Card 1 -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl p-md shadow-sm shadow-primary/5 border border-transparent hover:border-surface-variant transition-all cursor-pointer active:scale-[0.98]">
+<div class="flex gap-md">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A bright, modern exterior shot of a contemporary healthcare facility during daytime. The building features sleek architectural lines, large clean windows, and a welcoming entrance. The surrounding environment is tidy, with subtle green landscaping. The overall atmosphere conveys professional competence, cleanliness, and a welcoming clinical environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5QscyLCjSBAhrEhNR4R3BITh2hC3xNf9YnJiTGJ42Oo33EfJ3apzFuAkPLuIYkenD8ibVchfARE4o735iwrby8Ynxwf4FJ2vMBFdLyLFkpbgOabEuhCtpFw5VJ2NTglgOX1CE51b8Cdv6KCoQxdIw-UvWejSzuUsDb_jcynyJxH6-iaT6qlqMqJOnz27znmzvq0D-o5ta6KVFqw9Ehx85_L718wOqVnW5ecWksE9eKp2g3uietzSYa3oZy6ZjW0BurI4oAMk6N2k"/>
+</div>
+<div class="flex-1 flex flex-col justify-center">
+<h2 class="font-label-md text-label-md text-on-surface mb-xs group-hover:text-primary transition-colors">City General Hospital</h2>
+<div class="flex items-center text-outline font-body-sm text-body-sm mb-xs">
+<span class="material-symbols-outlined text-[16px] mr-xs">location_on</span>
+<span class="truncate">120 Medical Pkwy, Metro City</span>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<span class="inline-flex items-center px-sm py-[2px] rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px] mr-xs text-secondary">stethoscope</span>
+                                42 Doctors available
+                            </span>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl p-md shadow-sm shadow-primary/5 border border-transparent hover:border-surface-variant transition-all cursor-pointer active:scale-[0.98]">
+<div class="flex gap-md">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A clean, minimalist reception area of a modern medical clinic. The space is bathed in natural light, featuring comfortable seating in soft neutral tones and subtle wood accents. A sleek desk area stands in the background. The atmosphere is calm, organized, and reassuring, conveying a sense of empathetic efficiency." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDydnhMp3LRV5GeDI60O5FCsSaFnMU-U0Nsjk8O2ypEPF2ScQO2-WC0ofyFv1hyaAoh0bHmLqeZIOOSiKB5oQJbUTtUusTa8mc7VdjWPCmmTqmZnykbY5q9x3PNKE6C4OS5pHN3U_DJwtvRgWwJrRAqvvhoerPh6MvCdcevY4MjVSC-mVP8jA-P6NjINt1JZxOVAAMRAZIjr0WmQc5xfUwOnLJOzxcOKPbpzsgYT5FzjyfDkHmj6BgeHM939jtWKb50aZlDViaHPz8"/>
+</div>
+<div class="flex-1 flex flex-col justify-center">
+<h2 class="font-label-md text-label-md text-on-surface mb-xs group-hover:text-primary transition-colors">Downtown Wellness Clinic</h2>
+<div class="flex items-center text-outline font-body-sm text-body-sm mb-xs">
+<span class="material-symbols-outlined text-[16px] mr-xs">location_on</span>
+<span class="truncate">88 Harmony Street, Westside</span>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<span class="inline-flex items-center px-sm py-[2px] rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px] mr-xs text-secondary">stethoscope</span>
+                                15 Doctors available
+                            </span>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group flex flex-col bg-surface-container-lowest rounded-xl p-md shadow-sm shadow-primary/5 border border-transparent hover:border-surface-variant transition-all cursor-pointer active:scale-[0.98]">
+<div class="flex gap-md">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-[32px]">local_hospital</span>
+</div>
+<div class="flex-1 flex flex-col justify-center">
+<h2 class="font-label-md text-label-md text-on-surface mb-xs group-hover:text-primary transition-colors">Northside Pediatric Center</h2>
+<div class="flex items-center text-outline font-body-sm text-body-sm mb-xs">
+<span class="material-symbols-outlined text-[16px] mr-xs">location_on</span>
+<span class="truncate">450 Family Ave, Northside</span>
+</div>
+<div class="flex items-center justify-between mt-auto">
+<span class="inline-flex items-center px-sm py-[2px] rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px] mr-xs text-secondary">stethoscope</span>
+                                8 Doctors available
+                            </span>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 right-0 h-20 z-50 flex justify-around items-center px-4 pb-safe max-w-md mx-auto bg-surface-container-lowest/95 backdrop-blur-md shadow-[0_-4px_12px_rgba(0,123,255,0.06)] border-t border-surface-container">
+<button class="flex flex-col items-center justify-center text-outline hover:text-primary transition-opacity active:opacity-80 w-16">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</button>
+<!-- Active Tab -->
+<button class="flex flex-col items-center justify-center text-primary scale-110 transition-transform w-16">
+<span class="material-symbols-outlined mb-1" data-icon="medical_services" data-weight="fill" style="font-variation-settings: 'FILL' 1;">medical_services</span>
+<span class="font-label-sm text-label-sm font-bold">Doctors</span>
+</button>
+<button class="flex flex-col items-center justify-center text-outline hover:text-primary transition-opacity active:opacity-80 w-16">
+<span class="material-symbols-outlined mb-1" data-icon="event_available">event_available</span>
+<span class="font-label-sm text-label-sm">Appointments</span>
+</button>
+<button class="flex flex-col items-center justify-center text-outline hover:text-primary transition-opacity active:opacity-80 w-16">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</button>
+</nav>
+</body></html>

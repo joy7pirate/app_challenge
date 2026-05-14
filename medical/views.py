@@ -16,6 +16,8 @@ class MedecinListCreateView(ListCreateAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['specialite', 'centre']
 
+#  ca sert a afficher les disponibilites d'un medecin ou d'un centre de sante
+
 class DisponibiliteListCreateView(ListCreateAPIView):
     queryset = Disponibilite.objects.all()
     serializer_class = DisponibiliteSerializer

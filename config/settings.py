@@ -24,8 +24,11 @@ SECRET_KEY = 'django-insecure-h+u$uxmd*a)rq24*ex^k3p2b552l*p%-so$9#-r#+a10mrwwq7
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = []
+# je dois mettre ALLOWED_HOSTS à ['*'] pour que le projet fonctionne sur Render, 
+# sinon j'ai une erreur "DisallowedHost at / Invalid HTTP_HOST header: 'render.com'. You may need to add 'render.com' to ALLOWED_HOSTS."
+# Mais je sais que ce n'est pas sécurisé pour la production, donc je vais le faire uniquement pour le développement local.
+# et je vais ajouter une condition pour que ALLOWED_HOSTS soit différent en production.
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
