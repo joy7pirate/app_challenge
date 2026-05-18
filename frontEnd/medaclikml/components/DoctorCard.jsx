@@ -1,8 +1,9 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import EvilIcons from '@expo/vector-icons/EvilIcons';
-
+import { useRouter } from 'expo-router';
 
 export default function DoctorCard({ doctor }) {
+  const router = useRouter();
   return (
     // card container
     <View style={styles.cardContainer}>
@@ -25,10 +26,12 @@ export default function DoctorCard({ doctor }) {
 
 
         <View style={styles.buttonsContainer}>
-            <TouchableOpacity style={{ backgroundColor: "#3b82f6", padding: 10, borderRadius: 8, marginTop: 10, flex: 1 }}>
+            <TouchableOpacity style={{ backgroundColor: "#3b82f6", padding: 10, borderRadius: 8, marginTop: 10, flex: 1 }}
+                >
                 <Text style={{ color: "#fff", textAlign: "center" }}>Prendre rendez-vous</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={{ backgroundColor: "#fff", padding: 10, borderRadius: 8, marginTop: 10, flex: 1 , borderWidth: 1, borderColor:"#006874"}}>
+            <TouchableOpacity style={{ backgroundColor: "#fff", padding: 10, borderRadius: 8, marginTop: 10, flex: 1 , borderWidth: 1, borderColor:"#006874"}}
+                onPress={() => router.push(`/doctor/${doctor.id}`)}>
                 <Text style={{ color: "#006874", textAlign: "center" }}>Voir le profil</Text>
             </TouchableOpacity>
         </View>
