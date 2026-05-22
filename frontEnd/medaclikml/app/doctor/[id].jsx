@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -35,16 +36,13 @@ const JOUR_ABBR = {
   samedi: "Sat",
 };
 
-// "14:00:00" -> "02:00 PM"
-const formatHeure12 = (heure) => {
+// Retourne l'heure en format 24h, ex: "14:00"
+const formatHeure24 = (heure) => {
   if (!heure) return "";
   const [hStr, mStr] = heure.split(":");
-  let h = parseInt(hStr, 10);
+  const h = parseInt(hStr, 10);
   const m = mStr ?? "00";
-  const period = h >= 12 ? "PM" : "AM";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${String(h).padStart(2, "0")}:${m} ${period}`;
+  return `${String(h).padStart(2, "0")}:${m}`;
 };
 
 // Renvoie la prochaine date (objet Date) correspondant à un jour de semaine donné
@@ -82,7 +80,7 @@ const grouperParJour = (disponibilites = []) => {
 
 // ---------- Composant Available Times ----------
 
-function AvailableTimes({ disponibilites }) {
+function AvailableTimes({ disponibilites, onSelectionChange }) {
   const jours = useMemo(() => grouperParJour(disponibilites), [disponibilites]);
 
   const [selectedJour, setSelectedJour] = useState(
@@ -121,6 +119,7 @@ function AvailableTimes({ disponibilites }) {
               onPress={() => {
                 setSelectedJour(jour);
                 setSelectedCreneauId(null);
+                if (onSelectionChange) onSelectionChange(jour, null);
               }}
             >
               <Text
@@ -153,10 +152,13 @@ function AvailableTimes({ disponibilites }) {
               key={c.id}
               activeOpacity={0.8}
               style={[
-                atStyles.slot,
+                atStyles.slotCard,
                 isSelected && atStyles.slotActive,
               ]}
-              onPress={() => setSelectedCreneauId(c.id)}
+              onPress={() => {
+                setSelectedCreneauId(c.id);
+                if (onSelectionChange) onSelectionChange(jourCourant.jour, c);
+              }}
             >
               <Text
                 style={[
@@ -164,7 +166,7 @@ function AvailableTimes({ disponibilites }) {
                   isSelected && atStyles.slotTextActive,
                 ]}
               >
-                {formatHeure12(c.heure_debut)}
+                {formatHeure24(c.heure_debut)}
               </Text>
             </TouchableOpacity>
           );
@@ -182,6 +184,8 @@ export default function DoctorDetail() {
   const [doctor, setDoctor] = useState(null);
   const [disponibilites, setDisponibilites] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedJour, setSelectedJour] = useState(null);
+  const [selectedCreneau, setSelectedCreneau] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -243,7 +247,13 @@ export default function DoctorDetail() {
         </View>
 
         {/* Available Times */}
-        <AvailableTimes disponibilites={disponibilites} />
+        <AvailableTimes
+          disponibilites={disponibilites}
+          onSelectionChange={(jour, creneau) => {
+            setSelectedJour(jour);
+            setSelectedCreneau(creneau);
+          }}
+        />
 
         {/* Coordonnées */}
         <View style={styles.section}>
@@ -263,7 +273,47 @@ export default function DoctorDetail() {
 
         {/* Actions */}
         <View style={styles.buttonsContainer}>
-          <TouchableOpacity style={styles.primaryBtn}>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => {
+              if (!selectedCreneau || !selectedJour) {
+                Alert.alert(
+                  "Sélectionnez un créneau",
+                  "Veuillez choisir un jour et un horaire."
+                );
+                return;
+              }
+
+              const medecin = {
+                id: doctor.id,
+                nom: doctor.nom,
+                prenom: doctor.prenom,
+                specialite: doctor.specialite,
+                telephone: doctor.telephone,
+                email: doctor.email,
+              };
+
+              const centre = {
+                id: doctor.centre_detail?.id ?? null,
+                nom: doctor.centre_detail?.nom,
+                adresse: doctor.centre_detail?.adresse,
+                ville: doctor.centre_detail?.ville || "",
+              };
+
+              router.push({
+                pathname: "/booking",
+                params: {
+                  medecin: JSON.stringify(medecin),
+                  centre: JSON.stringify(centre),
+                  jour: selectedJour ? selectedJour.charAt(0).toUpperCase() + selectedJour.slice(1) : "",
+                  creneau: JSON.stringify({
+                    heure_debut: selectedCreneau.heure_debut,
+                    heure_fin: selectedCreneau.heure_fin,
+                  }),
+                },
+              });
+            }}
+          >
             <Text style={styles.primaryBtnText}>Prendre rendez-vous</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -341,7 +391,7 @@ const atStyles = StyleSheet.create({
     paddingHorizontal: 6,
     marginBottom: 12,
   },
-  slots: {
+  slotCard: {
     width: "31%",
     marginRight: "2%",
     marginBottom: 12,
