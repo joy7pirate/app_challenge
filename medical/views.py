@@ -10,6 +10,7 @@ from .models import CentreSante, Medecin, Disponibilite, Patient, RendezVous
 from .serializers import (CentreSanteSerializer, MedecinSerializer,
                           DisponibiliteSerializer, PatientSerializer,
                           RendezVousSerializer, RegisterSerializer)
+from medical import serializers
 
 # Create your views here.
 # Les vues pour les centres de santé, les médecins et les disponibilités sont créées en utilisant des classes génériques de DRF pour faciliter les opérations CRUD.
@@ -65,18 +66,24 @@ class PatientViewSet(viewsets.ViewSet):
 # Voir mes RDV + Créer un RDV
 class RendezVousListCreateView(generics.ListCreateAPIView):
     serializer_class = RendezVousSerializer
-    permission_classes = [AllowAny]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]  # ← obligatoire
 
     def get_queryset(self):
         return RendezVous.objects.filter(patient=self.request.user.patient)
 
     def perform_create(self, serializer):
-        serializer.save(patient=self.request.user.patient)
+        try:
+            patient = self.request.user.patient
+            serializer.save(patient=patient)
+        except Exception as e:
+            raise serializers.ValidationError(f"Erreur patient : {e}")
 
 # Modifier / Annuler un RDV
 class RendezVousDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = RendezVousSerializer
-    permission_classes = [AllowAny]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return RendezVous.objects.filter(patient=self.request.user.patient)

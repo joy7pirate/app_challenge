@@ -136,9 +136,9 @@ class PatientSerializer(serializers.ModelSerializer):
 class RendezVousSerializer(serializers.ModelSerializer):
     patient_detail = PatientSerializer(source='patient', read_only=True)
     medecin_detail = MedecinSimpleSerializer(source='medecin', read_only=True)
-
+    
     class Meta:
         model  = RendezVous
         fields = ['id', 'patient', 'medecin', 'jour', 'heure',
                   'motif', 'statut', 'patient_detail', 'medecin_detail']
-        read_only_fields = ['patient','statut']  # le patient = user connecté automatiquement
+        read_only_fields = ['patient']  # le patient = user connecté automatiquement
