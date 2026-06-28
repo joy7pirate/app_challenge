@@ -142,3 +142,15 @@ class RendezVousSerializer(serializers.ModelSerializer):
         fields = ['id', 'patient', 'medecin', 'jour', 'heure',
                   'motif', 'statut', 'patient_detail', 'medecin_detail']
         read_only_fields = ['patient']  # le patient = user connecté automatiquement
+
+
+
+class RendezVousSerializer(serializers.ModelSerializer):
+    patient_nom = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RendezVous
+        fields = '__all__'
+
+    def get_patient_nom(self, obj):
+        return f"{obj.patient.user.first_name} {obj.patient.user.last_name}"

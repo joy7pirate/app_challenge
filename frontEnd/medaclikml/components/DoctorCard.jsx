@@ -3,12 +3,34 @@ import EvilIcons from '@expo/vector-icons/EvilIcons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from "react";
 import { api } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const getNextDateFromDayName = (jour) => {
+  if (!jour) return "";
+  const mapping = {
+    dimanche: 0,
+    lundi: 1,
+    mardi: 2,
+    mercredi: 3,
+    jeudi: 4,
+    vendredi: 5,
+    samedi: 6,
+  };
+  const target = mapping[jour.toLowerCase()];
+  if (target === undefined) return "";
+  const today = new Date();
+  const diff = (target - today.getDay() + 7) % 7;
+  const d = new Date(today);
+  d.setDate(today.getDate() + (diff === 0 ? 7 : diff));
+  return d.toISOString().slice(0, 10);
+};
 
 export default function DoctorCard({ doctor }) {
   const router = useRouter();
   const [disponibilites, setDisponibilites] = useState([]);
 
   useEffect(() => {
+
     // Récupère rapidement les disponibilités pour proposer le premier créneau
     let mounted = true;
     api
@@ -81,7 +103,7 @@ export default function DoctorCard({ doctor }) {
                     params: {
                       medecin: JSON.stringify(medecin),
                       centre: JSON.stringify(centre),
-                      jour: first.jour || '',
+                      jour: getNextDateFromDayName(first.jour) || first.jour || '',
                       creneau: JSON.stringify({
                         heure_debut: first.heure_debut,
                         heure_fin: first.heure_fin,
@@ -97,6 +119,7 @@ export default function DoctorCard({ doctor }) {
                 <Text style={{ color: "#006874", textAlign: "center" }}>Voir le profil</Text>
             </TouchableOpacity>
         </View>
+        
     </View>
   );
 }

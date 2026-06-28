@@ -14,6 +14,7 @@ class CentreSante(models.Model):
 
 
 class Medecin(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)  
     nom = models.CharField(max_length=100)
     prenom = models.CharField(max_length=100)
     specialite = models.CharField(max_length=100)

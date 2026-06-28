@@ -9,8 +9,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { api } from "../../services/api";
 
 const formatHeure24 = (heure) => {
   if (!heure) return "";
@@ -23,6 +26,27 @@ const formatHeure24 = (heure) => {
 const capitalize = (text) => {
   if (!text) return "";
   return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+const getNextDateFromDayName = (jour) => {
+  if (!jour) return null;
+  const mapping = {
+    dimanche: 0,
+    lundi: 1,
+    mardi: 2,
+    mercredi: 3,
+    jeudi: 4,
+    vendredi: 5,
+    samedi: 6,
+  };
+  const normalized = jour.toLowerCase();
+  const target = mapping[normalized];
+  if (target === undefined) return null;
+  const today = new Date();
+  const diff = (target - today.getDay() + 7) % 7;
+  const d = new Date(today);
+  d.setDate(today.getDate() + (diff === 0 ? 7 : diff));
+  return d.toISOString().slice(0, 10);
 };
 
 const parseParam = (value) => {
@@ -44,6 +68,18 @@ const getInitials = (medecin) => {
   return `${first}${last}`.toUpperCase();
 };
 
+const formatDateFR = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+};
+
 export default function BookingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -58,23 +94,109 @@ export default function BookingScreen() {
   const [motif, setMotif] = useState("");
   const [focusedField, setFocusedField] = useState(null);
 
-  const handleConfirm = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
     if (!prenom.trim() || !nom.trim() || !telephone.trim() || !motif.trim()) {
       Alert.alert("Veuillez remplir tous les champs");
       return;
     }
 
-    const heureDebut = creneau?.heure_debut || "";
-    Alert.alert(
-      "✅ Rendez-vous confirmé !",
-      `Votre RDV avec Dr. ${medecin?.nom || "..."} est confirmé\nle ${jour || "..."} à ${formatHeure24(heureDebut)}.`,
-      [
-        {
-          text: "Retour à l'accueil",
-          onPress: () => router.push("/"),
+    if (!medecin?.id || !centre?.id) {
+      Alert.alert("Erreur", "Impossible d'identifier le médecin ou le centre.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) {
+        Alert.alert('Erreur', 'Vous devez être connecté pour prendre un rendez-vous.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      const profileRes = await api.get('/auth/me/', {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      ]
-    );
+      });
+      const profile = profileRes.data || {};
+      console.log('Profil auth:', profile);
+
+      const patientIdRaw =
+        profile.patient?.id ||
+        profile.patient?.pk ||
+        profile.patient ||
+        profile.patient_id ||
+        profile.id ||
+        profile.pk ||
+        profile.user_id ||
+        profile.user?.id;
+
+      const patientId =
+        patientIdRaw === undefined || patientIdRaw === null
+          ? null
+          : Number(patientIdRaw);
+
+      if (!patientId || Number.isNaN(patientId)) {
+        throw new Error('Identifiant patient introuvable');
+      }
+
+      const normalizedJour = /^\d{4}-\d{2}-\d{2}$/.test(jour)
+        ? jour
+        : getNextDateFromDayName(jour);
+      if (!normalizedJour) {
+        throw new Error('Date invalide pour le rendez-vous');
+      }
+
+      const payload = {
+        medecin: medecin.id,
+        centre: centre.id,
+        patient: patientId,
+        patient_id: patientId,
+        patient_prenom: prenom,
+        patient_nom: nom,
+        telephone,
+        motif,
+        jour: normalizedJour,
+        heure: creneau?.heure_debut || "",
+        heure_fin: creneau?.heure_fin || "",
+        statut: "en_attente",
+      };
+
+      console.log('Rendez-vous payload:', payload);
+
+      const response = await api.post("/rendezvous/", payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('RDV créé:', response.data);
+
+      Alert.alert(
+        "✅ Rendez-vous confirmé !",
+        `Votre RDV avec Dr. ${medecin?.nom || "..."} est confirmé\nle ${normalizedJour || "..."} à ${formatHeure24(payload.heure)}.`,
+        [
+          {
+            text: "Retour à l'accueil",
+            onPress: () => router.push("/"),
+          },
+        ]
+      );
+    } catch (error) {
+      console.log("Erreur création RDV :", error.response?.data || error.message);
+      Alert.alert(
+        "Erreur",
+        error.response?.data?.detail ||
+          error.response?.data?.message ||
+          "Impossible de créer le rendez-vous. Vérifiez votre connexion ou réessayez plus tard."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!medecin || !centre || !jour || !creneau) {
@@ -210,8 +332,17 @@ export default function BookingScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm} activeOpacity={0.85}>
-          <Text style={styles.confirmButtonText}>Confirmer le rendez-vous</Text>
+        <TouchableOpacity
+          style={styles.confirmButton}
+          onPress={handleConfirm}
+          disabled={isSubmitting}
+          activeOpacity={0.85}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.confirmButtonText}>Confirmer le rendez-vous</Text>
+          )}
         </TouchableOpacity>
         <TouchableOpacity style={{ marginTop: 12 }} onPress={() => router.back()} activeOpacity={0.7}>
           <Text style={{ color: "#0066CC", textAlign: "center" }}>Modifier ma sélection</Text>

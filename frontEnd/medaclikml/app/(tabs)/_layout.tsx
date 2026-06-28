@@ -15,7 +15,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="centres"
+        name="centre"
         options={{
           title: 'Centres',
           headerShown: false,
@@ -25,7 +25,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profil"
+        name="profile"
         options={{
           title: 'Profil',
           headerShown: false,
