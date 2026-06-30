@@ -6,6 +6,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import Entypo from '@expo/vector-icons/Entypo';
 import axios from 'axios';
 
 const API_URL = "http://192.168.100.81:8000/api";
@@ -118,7 +122,7 @@ export default function MedecinProfileScreen() {
           </View>
           <View style={styles.infoContent}>
             <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue}>{profile?.email || 'N/A'}</Text>
+            <Text style={styles.infoValue}>{profile?.username || 'N/A'}</Text>
           </View>
         </View>
 
@@ -167,13 +171,19 @@ export default function MedecinProfileScreen() {
           {centres.map((centre, idx) => (
             <View key={idx} style={styles.centreCard}>
               <View style={styles.centreHeader}>
-                <Ionicons name="hospital-outline" size={20} color="#059669" />
+               <FontAwesome name="hospital-o" size={24} color="#059669" />
                 <Text style={styles.centreName}>{centre.nom}</Text>
               </View>
-              <Text style={styles.centreDetail}>📍 {centre.adresse}</Text>
-              <Text style={styles.centreDetail}>🏙️ {centre.ville}</Text>
+              <Text style={styles.centreDetail}>
+                <Entypo name="location-pin" size={20} color="#2563eb" />
+                 {centre.adresse}</Text>
+              <Text style={styles.centreDetail}>
+                <MaterialCommunityIcons name="city-variant-outline" size={18} color="#2563eb" />
+                 {centre.ville}</Text>
               {centre.telephone && (
-                <Text style={styles.centreDetail}>📞 {centre.telephone}</Text>
+                <Text style={styles.centreDetail}>
+                  <Feather name="phone" size={18} color="#2563eb" />
+                   {centre.telephone}</Text>
               )}
             </View>
           ))}

@@ -184,11 +184,14 @@ def me_view(request):
     if hasattr(user, 'medecin'):
         role = 'medecin'
         extra = {'medecin_id': user.medecin.id,
-                 'first_name': user.medecin.nom, 'last_name': user.medecin.prenom}
+                 'first_name': user.medecin.nom,
+                 'last_name': user.medecin.prenom,
+                 'specialite': user.medecin.specialite}
     elif hasattr(user, 'patient'):
         role = 'patient'
         extra = {'patient_id': user.patient.id,
-                 'first_name': user.patient.nom, 'last_name': user.patient.prenom}
+                #  'first_name': user.patient.nom, 'last_name': user.patient.prenom
+                }
     else:
         role = 'admin'
         extra = {}
