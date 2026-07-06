@@ -1,5 +1,3 @@
-// app/medecinPages/appointments.jsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
@@ -8,14 +6,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { router } from 'expo-router';
 
 const API_URL = "http://192.168.100.81:8000/api";
 
 const STATUT_STYLE = {
   en_attente: { bg: '#FFF3E0', text: '#FF9800', label: 'EN ATTENTE' },
+  confirme:   { bg: '#E8F5E9', text: '#4CAF50', label: 'CONFIRME'    },
   accepte:    { bg: '#E8F5E9', text: '#4CAF50', label: 'ACCEPTÉ'    },
   refuse:     { bg: '#FFEBEE', text: '#F44336', label: 'REFUSÉ'     },
   termine:    { bg: '#F3E5F5', text: '#9C27B0', label: 'TERMINÉ'    },
+  annule:     { bg: '#FFEBEE', text: '#F44336', label: 'ANNULE'      },
 };
 
 const FILTRES = [
@@ -26,6 +27,30 @@ const FILTRES = [
   { key: 'termine',    label: 'Terminé',    color: '#9C27B0' },
 ];
 
+const normalizeStatut = (statut) => {
+  if (statut === 'confirme') return 'accepte';
+  if (statut === 'annule') return 'refuse';
+  return statut;
+};
+
+const getRdvDateTime = (rdv) => {
+  if (!rdv?.jour) return null;
+
+  const [year, month, day] = String(rdv.jour).split('-').map(Number);
+  if (!year || !month || !day) return null;
+
+  const [hour = 0, minute = 0, second = 0] = String(rdv.heure || '00:00:00')
+    .split(':')
+    .map(Number);
+
+  return new Date(year, month - 1, day, hour || 0, minute || 0, second || 0);
+};
+
+const isRdvReadyToFinish = (rdv, now) => {
+  const rdvDateTime = getRdvDateTime(rdv);
+  return normalizeStatut(rdv.statut) === 'accepte' && rdvDateTime !== null && rdvDateTime <= now;
+};
+
 export default function AppointmentsScreen() {
   const [rdvs, setRdvs]               = useState([]);
   const [filtered, setFiltered]       = useState([]);
@@ -34,6 +59,7 @@ export default function AppointmentsScreen() {
   const [search, setSearch]           = useState('');
   const [activeStatut, setActiveStatut] = useState('all');
   const [thisWeek, setThisWeek]       = useState(false);
+  const [now, setNow]                 = useState(new Date());
   const [counts, setCounts]           = useState({
     en_attente: 0, accepte: 0, refuse: 0, termine: 0
   });
@@ -49,7 +75,10 @@ export default function AppointmentsScreen() {
       setRdvs(data);
 
       const c = { en_attente: 0, accepte: 0, refuse: 0, termine: 0 };
-      data.forEach(r => { if (c[r.statut] !== undefined) c[r.statut]++; });
+      data.forEach(r => {
+        const statut = normalizeStatut(r.statut);
+        if (c[statut] !== undefined) c[statut]++;
+      });
       setCounts(c);
     } catch (e) {
       Alert.alert('Erreur', 'Impossible de charger les rendez-vous');
@@ -61,12 +90,17 @@ export default function AppointmentsScreen() {
 
   useEffect(() => { fetchRdvs(); }, [fetchRdvs]);
 
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   // ── Filtrage ───────────────────────────────────────────────────────────────
   useEffect(() => {
     let result = [...rdvs];
 
     if (activeStatut !== 'all') {
-      result = result.filter(r => r.statut === activeStatut);
+      result = result.filter(r => normalizeStatut(r.statut) === activeStatut);
     }
 
     if (thisWeek) {
@@ -85,7 +119,8 @@ export default function AppointmentsScreen() {
 
     if (search.trim()) {
       result = result.filter(r =>
-        r.patient_nom?.toLowerCase().includes(search.toLowerCase()) ||
+        (`${r.patient_detail?.first_name || ''} ${r.patient_detail?.last_name || ''}`)
+          .toLowerCase().includes(search.toLowerCase()) ||
         r.motif?.toLowerCase().includes(search.toLowerCase())
       );
     }
@@ -123,18 +158,28 @@ export default function AppointmentsScreen() {
 
   // ── Render Card ────────────────────────────────────────────────────────────
   const renderCard = ({ item }) => {
-    const s     = STATUT_STYLE[item.statut] || STATUT_STYLE.en_attente;
-    const nom   = item.patient_nom || 'Patient';
-    const initiale = nom[0]?.toUpperCase() || '?';
+    const normalizedStatut = normalizeStatut(item.statut);
+    const s     = STATUT_STYLE[item.statut] || STATUT_STYLE[normalizedStatut] || STATUT_STYLE.en_attente;
+    const nom   = `${item.patient_detail?.first_name || ''} ${item.patient_detail?.last_name || ''}`.trim() || 'Patient';
     const date  = new Date(item.jour).toLocaleDateString('fr-FR', {
       day: '2-digit', month: 'short', year: 'numeric'
     });
     const heure = item.heure?.slice(0, 5);
-    const isToday = new Date(item.jour).toDateString() === new Date().toDateString();
+    const rdvDateTime = getRdvDateTime(item);
+    const canFinish = isRdvReadyToFinish(item, now);
+    const initiale = (() => {
+      const first = item.patient_detail?.first_name?.trim();
+      const last  = item.patient_detail?.last_name?.trim();
+      if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
+      if (first) return first[0].toUpperCase();
+      if (last)  return last[0].toUpperCase();
+      return 'P';
+    })();
 
     return (
       <View style={styles.card}>
-        {/* Header */}
+
+        {/* ── Header ── */}
         <View style={styles.cardHeader}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initiale}</Text>
@@ -184,9 +229,9 @@ export default function AppointmentsScreen() {
         )}
 
         {/* ── Boutons ACCEPTÉ ── */}
-        {item.statut === 'confirmer' && (
+        {item.statut === 'accepte' && (
           <View style={styles.actions}>
-            {isToday ? (
+            {canFinish  ? (
               <TouchableOpacity
                 style={[styles.btn, { backgroundColor: '#2196F3', flex: 1 }]}
                 onPress={() => confirmerAction(item.id, 'termine', nom)}
@@ -216,14 +261,14 @@ export default function AppointmentsScreen() {
           </View>
         )}
 
-        {/* ── REFUSÉ / TERMINÉ : juste info ── */}
+        {/* ── REFUSÉ / TERMINÉ ── */}
         {(item.statut === 'refuse' || item.statut === 'termine') && (
           <TouchableOpacity
             style={[styles.btn, { backgroundColor: '#F5F5F5', marginTop: 12 }]}
             onPress={() =>
               Alert.alert(
                 nom,
-                ` Motif : ${item.motif}\n Date : ${date}\n Heure : ${heure}`
+                `📋 Motif : ${item.motif}\n📅 Date : ${date}\n⏰ Heure : ${heure}`
               )
             }
           >
@@ -231,6 +276,22 @@ export default function AppointmentsScreen() {
             <Text style={[styles.btnText, { color: '#555' }]}>Voir détails</Text>
           </TouchableOpacity>
         )}
+
+        {/* ── Bouton Dossier Médical ── */}
+        <TouchableOpacity
+          style={styles.dossierBtn}
+          onPress={() => {
+            const patientId = item.patient_detail?.id ?? item.patient?.id ?? item.patient_id ?? item.id;
+            router.push({
+              pathname: '/medecinPages/dossierPatient',
+              params: { patientId, rdvId: item.id },
+            });
+          }}
+        >
+          <Ionicons name="folder-open-outline" size={16} color="#2563eb" />
+          <Text style={styles.dossierBtnText}>Dossier médical</Text>
+        </TouchableOpacity>
+
       </View>
     );
   };
@@ -250,7 +311,7 @@ export default function AppointmentsScreen() {
     </TouchableOpacity>
   );
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.center}>
@@ -259,11 +320,13 @@ export default function AppointmentsScreen() {
     );
   }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
+
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Appointments</Text>
+        <Text style={styles.headerTitle}>Rendez-vous</Text>
         <Text style={styles.headerSub}>Gérez vos rendez-vous patients</Text>
       </View>
 
@@ -282,10 +345,10 @@ export default function AppointmentsScreen() {
           <>
             {/* Stats */}
             <View style={styles.statsGrid}>
-              <StatsCard label="En attente" count={counts.en_attente} icon="time"          color="#FF9800" statut="en_attente" />
-              <StatsCard label="Acceptés"   count={counts.accepte}    icon="checkmark-circle" color="#4CAF50" statut="accepte"    />
-              <StatsCard label="Refusés"    count={counts.refuse}     icon="close-circle"  color="#F44336" statut="refuse"     />
-              <StatsCard label="Terminés"   count={counts.termine}    icon="checkmark-done-circle" color="#9C27B0" statut="termine"    />
+              <StatsCard label="En attente" count={counts.en_attente} icon="time"                   color="#FF9800" statut="en_attente" />
+              <StatsCard label="Acceptés"   count={counts.accepte}    icon="checkmark-circle"        color="#4CAF50" statut="accepte"    />
+              <StatsCard label="Refusés"    count={counts.refuse}     icon="close-circle"            color="#F44336" statut="refuse"     />
+              <StatsCard label="Terminés"   count={counts.termine}    icon="checkmark-done-circle"   color="#9C27B0" statut="termine"    />
             </View>
 
             {/* Search */}
@@ -340,7 +403,7 @@ export default function AppointmentsScreen() {
               ))}
             </ScrollView>
 
-            {/* Compteur résultats */}
+            {/* Compteur */}
             <Text style={styles.resultCount}>
               {filtered.length} rendez-vous trouvé{filtered.length > 1 ? 's' : ''}
             </Text>
@@ -358,45 +421,47 @@ export default function AppointmentsScreen() {
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────
+// ── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#F8F9FA' },
-  center:       { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
+  container:       { flex: 1, backgroundColor: '#F8F9FA' },
+  center:          { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
 
-  header:       { backgroundColor: '#fff', paddingTop: 55, paddingBottom: 18, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  headerTitle:  { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a' },
-  headerSub:    { fontSize: 13, color: '#888', marginTop: 2 },
+  header:          { backgroundColor: '#fff', paddingTop: 55, paddingBottom: 18, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  headerTitle:     { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a' },
+  headerSub:       { fontSize: 13, color: '#888', marginTop: 2 },
 
-  statsGrid:    { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 10 },
-  statCard:     { backgroundColor: '#fff', borderRadius: 14, padding: 16, alignItems: 'center', width: '47%', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  statLabel:    { fontSize: 12, color: '#888', marginTop: 6 },
-  statCount:    { fontSize: 24, fontWeight: 'bold', marginTop: 2 },
+  statsGrid:       { flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 10 },
+  statCard:        { backgroundColor: '#fff', borderRadius: 14, padding: 16, alignItems: 'center', width: '47%', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  statLabel:       { fontSize: 12, color: '#888', marginTop: 6 },
+  statCount:       { fontSize: 24, fontWeight: 'bold', marginTop: 2 },
 
-  searchBox:    { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1, borderColor: '#eee' },
-  searchInput:  { flex: 1, marginLeft: 8, fontSize: 14, color: '#333' },
+  searchBox:       { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 12, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, borderWidth: 1, borderColor: '#eee' },
+  searchInput:     { flex: 1, marginLeft: 8, fontSize: 14, color: '#333' },
 
-  filterBtn:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', marginRight: 8, gap: 4 },
+  filterBtn:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff', marginRight: 8, gap: 4 },
   filterBtnActive: { backgroundColor: '#E3F2FD', borderColor: '#2196F3' },
-  filterText:   { fontSize: 13, color: '#555' },
+  filterText:      { fontSize: 13, color: '#555' },
 
-  resultCount:  { paddingHorizontal: 16, paddingBottom: 8, fontSize: 12, color: '#aaa' },
+  resultCount:     { paddingHorizontal: 16, paddingBottom: 8, fontSize: 12, color: '#aaa' },
 
-  card:         { backgroundColor: '#fff', marginHorizontal: 12, marginBottom: 12, borderRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
-  cardHeader:   { flexDirection: 'row', gap: 12 },
-  avatar:       { width: 52, height: 52, borderRadius: 26, backgroundColor: '#E3F2FD', justifyContent: 'center', alignItems: 'center' },
-  avatarText:   { fontSize: 22, fontWeight: 'bold', color: '#2196F3' },
-  patientName:  { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
-  dateRow:      { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  dateText:     { fontSize: 12, color: '#888' },
-  motif:        { fontSize: 12, color: '#888', marginTop: 4, fontStyle: 'italic' },
-  badge:        { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, marginTop: 6 },
-  badgeText:    { fontSize: 11, fontWeight: 'bold' },
+  card:            { backgroundColor: '#fff', marginHorizontal: 12, marginBottom: 12, borderRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  cardHeader:      { flexDirection: 'row', gap: 12 },
+  avatar:          { width: 52, height: 52, borderRadius: 26, backgroundColor: '#E3F2FD', justifyContent: 'center', alignItems: 'center' },
+  avatarText:      { fontSize: 22, fontWeight: 'bold', color: '#2196F3' },
+  patientName:     { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
+  dateRow:         { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  dateText:        { fontSize: 12, color: '#888' },
+  motif:           { fontSize: 12, color: '#888', marginTop: 4, fontStyle: 'italic' },
+  badge:           { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, marginTop: 6 },
+  badgeText:       { fontSize: 11, fontWeight: 'bold' },
 
-  actions:      { flexDirection: 'row', marginTop: 14, gap: 8 },
-  btn:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, gap: 5 },
-  btnText:      { color: '#fff', fontWeight: '600', fontSize: 13 },
-  btnIcon:      { backgroundColor: '#F5F5F5', padding: 10, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  actions:         { flexDirection: 'row', marginTop: 14, gap: 8 },
+  btn:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, gap: 5 },
+  btnText:         { color: '#fff', fontWeight: '600', fontSize: 13 },
+  btnIcon:         { backgroundColor: '#F5F5F5', padding: 10, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 
-  emptyText:    { color: '#bbb', marginTop: 12, fontSize: 16 },
+  dossierBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', gap: 6 },
+  dossierBtnText:  { color: '#2563eb', fontWeight: '600', fontSize: 13 },
+
+  emptyText:       { color: '#bbb', marginTop: 12, fontSize: 16 },
 });

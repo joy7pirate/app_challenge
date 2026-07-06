@@ -38,6 +38,13 @@ export default function ProfilScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Profil</Text>
+
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() => router.push('/patientPages/dossier')}
+      >
+        <Text style={styles.primaryButtonText}>Voir mon dossier médical</Text>
+      </TouchableOpacity>
       
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Déconnexion</Text>
@@ -58,6 +65,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 40,
   },
+  primaryButton: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+    width: '100%',
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   logoutButton: {
     backgroundColor: '#dc2626',
     paddingVertical: 12,
@@ -65,6 +86,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 20,
+    width: '100%',
   },
   logoutButtonText: {
     color: '#fff',

@@ -48,3 +48,6 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+
+30/06 je viens de faire une page dossier pour gerer les dosseir medical des patient et le medecin peut voir et gerer .

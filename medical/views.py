@@ -1,25 +1,67 @@
-from django.shortcuts import render, get_object_or_404
-from rest_framework import generics, permissions, viewsets, status
+from django.shortcuts import get_object_or_404
+from rest_framework import generics, viewsets, status
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .models import CentreSante, Medecin, Disponibilite, Patient, RendezVous
-from .serializers import (CentreSanteSerializer, MedecinSerializer,
-                          DisponibiliteSerializer, PatientSerializer,
-                          RendezVousSerializer, RegisterSerializer)
+from django.contrib.auth import authenticate, get_user_model
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.parsers import MultiPartParser, FormParser
+
+from .models import (
+    CentreSante,
+    Medecin,
+    Disponibilite,
+    Patient,
+    RendezVous,
+    DossierMedical,
+    Consultation,
+    Ordonnance,
+    Examen,
+)
+from .serializers import (
+    CentreSanteSerializer,
+    MedecinSerializer,
+    DisponibiliteSerializer,
+    PatientSerializer,
+    RendezVousSerializer,
+    RegisterSerializer,
+    DossierMedicalSerializer,
+    ConsultationSerializer,
+    OrdonnanceSerializer,
+    ExamenSerializer,
+)
 from medical import serializers
 
-from django.contrib.auth import authenticate
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
+
+class IsRendezVousConfirme(BasePermission):
+    """Vérifie qu’un rendez-vous est confirmé ou terminé avant une action médicale."""
+
+    def has_object_permission(self, request, view, obj):
+        return getattr(obj, 'statut', None) in ['confirme', 'termine']
 
 
-# Create your views here.
-# Les vues pour les centres de santé, les médecins et les disponibilités sont créées en utilisant des classes génériques de DRF pour faciliter les opérations CRUD.
+class IsNotVerrouille(BasePermission):
+    """Bloque toute modification d’un objet déjà verrouillé."""
+
+    def has_object_permission(self, request, view, obj):
+        if hasattr(obj, 'is_verrouille'):
+            return not obj.is_verrouille
+        consultation = getattr(obj, 'consultation', None)
+        return not getattr(consultation, 'is_verrouille', False)
+
+
+def _has_confirmed_or_finished_rdv(medecin, patient):
+    return RendezVous.objects.filter(
+        medecin=medecin,
+        patient=patient,
+        statut__in=['confirme', 'termine', 'accepte'],
+    ).exists()
+
+
 class CentreSanteListCreateView(ListCreateAPIView):
     queryset = CentreSante.objects.all()
     serializer_class = CentreSanteSerializer
@@ -27,18 +69,19 @@ class CentreSanteListCreateView(ListCreateAPIView):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['ville']
 
+
 class MedecinListCreateView(ListCreateAPIView):
     queryset = Medecin.objects.all()
     serializer_class = MedecinSerializer
-    permission_classes = [AllowAny]  # ← ajoute
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['specialite', 'centre']
-#  ca sert a afficher les disponibilites d'un medecin ou d'un centre de sante
+
 
 class DisponibiliteListCreateView(ListCreateAPIView):
     queryset = Disponibilite.objects.all()
     serializer_class = DisponibiliteSerializer
-    permission_classes = [AllowAny]  # ← ajoute
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['medecin', 'jour']
 
@@ -52,7 +95,6 @@ class MedecinDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Medecin.objects.all()
     serializer_class = MedecinSerializer
     permission_classes = [AllowAny]
-
 
 
 class DisponibiliteDetailView(RetrieveUpdateDestroyAPIView):
@@ -69,11 +111,11 @@ class PatientViewSet(viewsets.ViewSet):
         serializer = PatientSerializer(patient)
         return Response(serializer.data)
 
-# Voir mes RDV + Créer un RDV
+
 class RendezVousListCreateView(generics.ListCreateAPIView):
     serializer_class = RendezVousSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]  # ← obligatoire
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return RendezVous.objects.filter(patient=self.request.user.patient)
@@ -85,7 +127,7 @@ class RendezVousListCreateView(generics.ListCreateAPIView):
         except Exception as e:
             raise serializers.ValidationError(f"Erreur patient : {e}")
 
-# Modifier / Annuler un RDV
+
 class RendezVousDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = RendezVousSerializer
     authentication_classes = [JWTAuthentication]
@@ -106,8 +148,6 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
@@ -115,29 +155,27 @@ def login_view(request):
     password = request.data.get('password')
 
     try:
-        User = get_user_model()
-        user_obj = User.objects.get(email=email)
+        user_model = get_user_model()
+        user_obj = user_model.objects.get(email=email)
         user = authenticate(username=user_obj.username, password=password)
-    except User.DoesNotExist:
+    except user_model.DoesNotExist:
         return Response({'error': 'Email introuvable'}, status=400)
 
     if user is None:
         return Response({'error': 'Mot de passe incorrect'}, status=400)
 
-    # ─── Déterminer le rôle ───────────────────────────
     if hasattr(user, 'medecin'):
         role = 'medecin'
     elif hasattr(user, 'patient'):
         role = 'patient'
     else:
         role = 'admin'
-    # ─────────────────────────────────────────────────
 
     refresh = RefreshToken.for_user(user)
     return Response({
         'access': str(refresh.access_token),
         'refresh': str(refresh),
-        'role': role,  # ← NOUVEAU
+        'role': role,
         'user': {
             'id': user.id,
             'email': user.email,
@@ -152,27 +190,17 @@ class MedecinDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Vérifier que c'est bien un médecin
         if not hasattr(request.user, 'medecin'):
-            return Response(
-                {'error': 'Accès refusé'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
 
         medecin = request.user.medecin
-
-        # Ses rendez-vous
         rendezvous = RendezVous.objects.filter(medecin=medecin)
-        rdv_serializer = RendezVousSerializer(rendezvous, many=True)
-
-        # Ses disponibilités
         dispos = Disponibilite.objects.filter(medecin=medecin)
-        dispo_serializer = DisponibiliteSerializer(dispos, many=True)
 
         return Response({
             'medecin': MedecinSerializer(medecin).data,
-            'rendezvous': rdv_serializer.data,
-            'disponibilites': dispo_serializer.data,
+            'rendezvous': RendezVousSerializer(rendezvous, many=True).data,
+            'disponibilites': DisponibiliteSerializer(dispos, many=True).data,
         })
 
 
@@ -183,15 +211,15 @@ def me_view(request):
 
     if hasattr(user, 'medecin'):
         role = 'medecin'
-        extra = {'medecin_id': user.medecin.id,
-                 'first_name': user.medecin.nom,
-                 'last_name': user.medecin.prenom,
-                 'specialite': user.medecin.specialite}
+        extra = {
+            'medecin_id': user.medecin.id,
+            'first_name': user.medecin.nom,
+            'last_name': user.medecin.prenom,
+            'specialite': user.medecin.specialite,
+        }
     elif hasattr(user, 'patient'):
         role = 'patient'
-        extra = {'patient_id': user.patient.id,
-                #  'first_name': user.patient.nom, 'last_name': user.patient.prenom
-                }
+        extra = {'patient_id': user.patient.id}
     else:
         role = 'admin'
         extra = {}
@@ -217,8 +245,19 @@ def changer_statut_rdv(request, rdv_id):
     except RendezVous.DoesNotExist:
         return Response({'error': 'RDV introuvable'}, status=404)
 
-    rdv.statut = request.data.get('statut', rdv.statut)
+    nouveau_statut = request.data.get('statut', rdv.statut)
+    if nouveau_statut == 'accepte':
+        nouveau_statut = 'confirme'
+
+    rdv.statut = nouveau_statut
     rdv.save()
+
+    if  rdv.statut == 'termine':
+        consultation = Consultation.objects.filter(rdv=rdv).first()
+        if consultation:
+            consultation.is_verrouille = True
+            consultation.save(update_fields=['is_verrouille'])
+
     return Response({'message': 'Statut mis à jour', 'statut': rdv.statut})
 
 
@@ -228,3 +267,248 @@ def rdv_medecin(request):
     rdvs = RendezVous.objects.filter(medecin=request.user.medecin)
     serializer = RendezVousSerializer(rdvs, many=True)
     return Response(serializer.data)
+
+
+class DossierPatientView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not hasattr(request.user, 'patient'):
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        dossier = get_object_or_404(DossierMedical, patient=request.user.patient)
+        serializer = DossierMedicalSerializer(dossier)
+        return Response(serializer.data)
+
+
+class MedecinPatientDossierView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def _get_accessible_dossier(self, request, patient_id):
+        if not hasattr(request.user, 'medecin'):
+            return None, Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        patient = get_object_or_404(Patient, id=patient_id)
+        if not _has_confirmed_or_finished_rdv(request.user.medecin, patient):
+            return None, Response({'error': 'Accès refusé : aucun rendez-vous confirmé ou terminé ne relie ce médecin à ce patient.'}, status=status.HTTP_403_FORBIDDEN)
+
+        dossier = get_object_or_404(DossierMedical, patient=patient)
+        return dossier, None
+
+    def get(self, request, patient_id):
+        dossier, error_response = self._get_accessible_dossier(request, patient_id)
+        if error_response is not None:
+            return error_response
+
+        serializer = DossierMedicalSerializer(dossier)
+        return Response(serializer.data)
+
+    def patch(self, request, patient_id):
+        dossier, error_response = self._get_accessible_dossier(request, patient_id)
+        if error_response is not None:
+            return error_response
+
+        serializer = DossierMedicalSerializer(dossier, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
+
+
+class ConsultationCreateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not hasattr(request.user, 'medecin'):
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        rdv_id = request.data.get('rdv')
+        if not rdv_id:
+            return Response({'error': 'Le rendez-vous est obligatoire.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        rdv = get_object_or_404(RendezVous, id=rdv_id)
+        if rdv.medecin != request.user.medecin:
+            return Response({'error': 'Ce rendez-vous ne vous appartient pas.'}, status=status.HTTP_403_FORBIDDEN)
+        if rdv.statut != 'confirme':
+            return Response({'error': 'Une consultation ne peut être créée que pour un rendez-vous confirmé.'}, status=status.HTTP_403_FORBIDDEN)
+        if Consultation.objects.filter(rdv=rdv).exists():
+            return Response({'error': 'Une consultation existe déjà pour ce rendez-vous.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        dossier = get_object_or_404(DossierMedical, patient=rdv.patient)
+        data = request.data.copy()
+        data['dossier_medical'] = dossier.id
+        data['medecin'] = request.user.medecin.id
+        data['rdv'] = rdv.id
+
+        serializer = ConsultationSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ConsultationDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, consultation_id):
+        consultation = get_object_or_404(Consultation, id=consultation_id)
+
+        if hasattr(request.user, 'patient') and consultation.dossier_medical.patient.user == request.user:
+            serializer = ConsultationSerializer(consultation)
+            return Response(serializer.data)
+
+        if hasattr(request.user, 'medecin') and consultation.medecin.user == request.user:
+            serializer = ConsultationSerializer(consultation)
+            return Response(serializer.data)
+
+        return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+    def put(self, request, consultation_id):
+        return self._update_consultation(request, consultation_id, partial=False)
+
+    def patch(self, request, consultation_id):
+        return self._update_consultation(request, consultation_id, partial=True)
+
+    def _update_consultation(self, request, consultation_id, partial=False):
+        if not hasattr(request.user, 'medecin'):
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        consultation = get_object_or_404(Consultation, id=consultation_id)
+        if consultation.medecin.user != request.user:
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+        if not IsNotVerrouille().has_object_permission(request, self, consultation):
+            return Response({'error': 'Cette consultation est verrouillée et ne peut plus être modifiée.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ConsultationSerializer(consultation, data=request.data, partial=partial)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrdonnanceCreateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not hasattr(request.user, 'medecin'):
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        consultation_id = request.data.get('consultation')
+        if not consultation_id:
+            return Response({'error': 'La consultation est obligatoire.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        consultation = get_object_or_404(Consultation, id=consultation_id)
+        if consultation.medecin.user != request.user:
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+        if consultation.is_verrouille:
+            return Response({'error': 'Cette consultation est verrouillée, l’ordonnance ne peut plus être modifiée.'}, status=status.HTTP_403_FORBIDDEN)
+
+        data = request.data.copy()
+        data['consultation'] = consultation.id
+
+        serializer = OrdonnanceSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrdonnanceDetailView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, ordonnance_id):
+        return self._update_ordonnance(request, ordonnance_id, partial=False)
+
+    def patch(self, request, ordonnance_id):
+        return self._update_ordonnance(request, ordonnance_id, partial=True)
+
+    def _update_ordonnance(self, request, ordonnance_id, partial=False):
+        if not hasattr(request.user, 'medecin'):
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        ordonnance = get_object_or_404(Ordonnance, id=ordonnance_id)
+        if ordonnance.consultation.medecin.user != request.user:
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+        if not IsNotVerrouille().has_object_permission(request, self, ordonnance):
+            return Response({'error': 'Cette ordonnance est verrouillée et ne peut plus être modifiée.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = OrdonnanceSerializer(ordonnance, data=request.data, partial=partial)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ExamenCreateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+    def post(self, request):
+        if not hasattr(request.user, 'medecin'):
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        consultation_id = request.data.get('consultation')
+        patient_id = request.data.get('patient')
+        dossier_id = request.data.get('dossier_medical')
+
+        if consultation_id:
+            consultation = get_object_or_404(Consultation, id=consultation_id)
+            if consultation.is_verrouille:
+                return Response({'error': 'Cette consultation est verrouillée, l’examen ne peut plus être modifié.'}, status=status.HTTP_403_FORBIDDEN)
+            dossier = consultation.dossier_medical
+        elif dossier_id:
+            dossier = get_object_or_404(DossierMedical, id=dossier_id)
+        elif patient_id:
+            patient = get_object_or_404(Patient, id=patient_id)
+            dossier = get_object_or_404(DossierMedical, patient=patient)
+        else:
+            return Response({'error': 'Le patient, le dossier ou la consultation est obligatoire.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = request.data.copy()
+        data['dossier_medical'] = dossier.id
+        if consultation_id:
+            data['consultation'] = consultation.id
+
+        serializer = ExamenSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ExamenResultUpdateView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request, examen_id):
+        return self._update_resultat(request, examen_id, partial=True)
+
+    def patch(self, request, examen_id):
+        return self._update_resultat(request, examen_id, partial=True)
+
+    def _update_resultat(self, request, examen_id, partial=False):
+        if not hasattr(request.user, 'medecin'):
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        examen = get_object_or_404(Examen, id=examen_id)
+        if examen.consultation and examen.consultation.is_verrouille and examen.resultat not in [None, '']:
+            return Response({'error': 'Le résultat a déjà été renseigné et l’examen est verrouillé.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if examen.consultation and examen.consultation.is_verrouille:
+            data = {'resultat': request.data.get('resultat', examen.resultat)}
+            if set(request.data.keys()) - {'resultat'}:
+                return Response({'error': 'Seul le champ resultat peut être renseigné après verrouillage.'}, status=status.HTTP_403_FORBIDDEN)
+        else:
+            data = request.data
+
+        serializer = ExamenSerializer(examen, data=data, partial=partial)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
