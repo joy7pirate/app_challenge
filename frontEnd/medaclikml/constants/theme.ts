@@ -3,7 +3,7 @@
  * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
  */
 
-import { Platform } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
@@ -26,6 +26,23 @@ export const Colors = {
     tabIconSelected: tintColorDark,
   },
 };
+
+// Thème par défaut pour la géolocalisation et autres composants
+export const theme = {
+  colors: {
+    primary: '#0a7ea4',      // Bleu principal (identique à tint)
+    secondary: '#687076',    // Gris pour texte secondaire
+    accent: '#FF6B6B',       // Rouge/orange pour accent (distance)
+    text: '#11181C',         // Texte principal
+    background: '#fff',      // Fond blanc
+    white: '#ffffff',        // Blanc pur
+    error: '#FF6B6B',        // Couleur erreur
+    success: '#51CF66',      // Couleur succès
+  },
+};
+
+// Exporter le thème par défaut
+export default theme;
 
 export const Fonts = Platform.select({
   ios: {

@@ -111,6 +111,13 @@ class PatientViewSet(viewsets.ViewSet):
         serializer = PatientSerializer(patient)
         return Response(serializer.data)
 
+    def partial_update(self, request, pk=None):
+        patient = get_object_or_404(Patient, pk=pk, user=request.user)
+        serializer = PatientSerializer(patient, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
 
 class RendezVousListCreateView(generics.ListCreateAPIView):
     serializer_class = RendezVousSerializer

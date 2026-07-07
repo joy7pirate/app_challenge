@@ -23,6 +23,7 @@ from .views import (
     OrdonnanceDetailView,
     ExamenCreateView,
     ExamenResultUpdateView,
+    PatientViewSet,
 )
 
 urlpatterns = [
@@ -56,4 +57,13 @@ urlpatterns = [
     path('ordonnances/<int:ordonnance_id>/', OrdonnanceDetailView.as_view(), name='ordonnance-detail'),
     path('examens/create/', ExamenCreateView.as_view(), name='examen-create'),
     path('examens/<int:examen_id>/resultat/', ExamenResultUpdateView.as_view(), name='examen-resultat'),
+
+
+      path('patients/', PatientViewSet.as_view({
+        'get': 'list',
+    }), name='patients-list'),
+    path('patients/<int:pk>/', PatientViewSet.as_view({
+        'patch': 'partial_update',
+        'put': 'partial_update',
+    }), name='patients-detail'),
 ]

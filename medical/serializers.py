@@ -39,13 +39,13 @@ class CentreSanteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CentreSante
-        fields = ['id', 'nom', 'adresse', 'telephone', 'email', 'ville', 'medecins']
+        fields = ['id', 'nom', 'adresse', 'telephone', 'email', 'ville', 'latitude', 'longitude', 'medecins']
 
 
 class CentreSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = CentreSante
-        fields = ['id', 'nom', 'ville', 'adresse', 'telephone']
+        fields = ['id', 'nom', 'ville', 'adresse', 'telephone', 'latitude', 'longitude']
 
 
 class DisponibiliteSimpleSerializer(serializers.ModelSerializer):

@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
   View,
   Text,
@@ -15,9 +14,9 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
-import { getDistanceKm, formatDistance, openGoogleMapsDirections, sortCentresByDistance } from '../../utils/geolocation';
-import { API_BASE_URL } from '../../constants/api';
-import theme from '../../constants/theme';
+import { getDistanceKm, formatDistance, openGoogleMapsDirections, sortCentresByDistance } from '../utils/geolocation';
+import { API_BASE_URL } from '../constants/api';
+import theme from '../constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -189,8 +188,7 @@ export default function CentresProchesScreen() {
 
             {distance && (
               <View style={styles.distanceRow}>
-                <MaterialCommunityIcons name="map-marker-distance" size={16} color={theme.colors.accent} />
-                {/* <MaterialIcons name="distance" size={16} color={theme.colors.accent} /> */}
+                <MaterialIcons name="distance" size={16} color={theme.colors.accent} />
                 <Text style={styles.distanceText}>
                   {distance} km de votre position
                 </Text>
