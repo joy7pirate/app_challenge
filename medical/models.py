@@ -52,6 +52,7 @@ class RendezVous(models.Model):
     STATUT_CHOICES = [
         ('en_attente', 'En attente'),
         ('confirme', 'Confirmé'),
+        ('reporte', 'Reporté'),
         ('termine', 'Terminé'),
         ('annule', 'Annulé'),
     ]
@@ -65,6 +66,10 @@ class RendezVous(models.Model):
         choices=STATUT_CHOICES, 
         default='en_attente'
     )
+
+    nouveau_jour = models.DateField(blank=True, null=True)
+    nouvelle_heure = models.TimeField(blank=True, null=True)
+    commentaire_medecin = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"RDV {self.patient} - Dr {self.medecin} le {self.jour}"

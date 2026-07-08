@@ -28,6 +28,7 @@ from .serializers import (
     DisponibiliteSerializer,
     PatientSerializer,
     RendezVousSerializer,
+    RendezVousPatientSerializer,
     RegisterSerializer,
     DossierMedicalSerializer,
     ConsultationSerializer,
@@ -257,9 +258,16 @@ def changer_statut_rdv(request, rdv_id):
         nouveau_statut = 'confirme'
 
     rdv.statut = nouveau_statut
+
+    # Gestion de la contre-proposition (report)
+    if nouveau_statut == 'reporte':
+        rdv.nouveau_jour = request.data.get('nouveau_jour', rdv.nouveau_jour)
+        rdv.nouvelle_heure = request.data.get('nouvelle_heure', rdv.nouvelle_heure)
+        rdv.commentaire_medecin = request.data.get('commentaire_medecin', rdv.commentaire_medecin)
+
     rdv.save()
 
-    if  rdv.statut == 'termine':
+    if rdv.statut == 'termine':
         consultation = Consultation.objects.filter(rdv=rdv).first()
         if consultation:
             consultation.is_verrouille = True
@@ -519,3 +527,57 @@ class ExamenResultUpdateView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
+class RendezVousPatientListView(generics.ListAPIView):
+    serializer_class = RendezVousPatientSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return RendezVous.objects.filter(
+            patient=self.request.user.patient
+        ).order_by('-jour', '-heure')
+
+
+class RepondreContrePropositionView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, rdv_id):
+        if not hasattr(request.user, 'patient'):
+            return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
+        rdv = get_object_or_404(RendezVous, id=rdv_id, patient=request.user.patient)
+
+        if not rdv.nouveau_jour or not rdv.nouvelle_heure:
+            return Response(
+                {'error': 'Aucune contre-proposition en attente pour ce rendez-vous.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reponse = request.data.get('reponse')  # 'accepter' ou 'refuser'
+
+        if reponse == 'accepter':
+            rdv.jour = rdv.nouveau_jour
+            rdv.heure = rdv.nouvelle_heure
+            rdv.nouveau_jour = None
+            rdv.nouvelle_heure = None
+            rdv.commentaire_medecin = None
+            rdv.statut = 'confirme'
+            rdv.save()
+            return Response({'message': 'Contre-proposition acceptée', 'statut': rdv.statut})
+
+        elif reponse == 'refuser':
+            rdv.nouveau_jour = None
+            rdv.nouvelle_heure = None
+            rdv.commentaire_medecin = None
+            rdv.statut = 'annule'
+            rdv.save()
+            return Response({'message': 'Contre-proposition refusée', 'statut': rdv.statut})
+
+        return Response(
+            {'error': "Le champ 'reponse' doit être 'accepter' ou 'refuser'."},
+            status=status.HTTP_400_BAD_REQUEST
+        )

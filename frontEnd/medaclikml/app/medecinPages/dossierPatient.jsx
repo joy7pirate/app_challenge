@@ -389,46 +389,30 @@ export default function DossierMedicalScreen() {
     if (!dossier) return null;
 
     switch (activeTab) {
-      case 'infos':
-        return (
-          <View>
-<Section title="Informations du Patient" icon="person" color="#2563eb">
-  {[
-    { label: 'Nom', value: dossier.patient?.last_name },
-    { label: 'Prénom', value: dossier.patient?.first_name },
-    { label: 'Email', value: dossier.patient?.email },
-    { label: 'Téléphone', value: dossier.patient?.telephone },
-    { label: 'Date de naissance', value: dossier.patient?.date_naissance },
-    { label: 'Adresse', value: dossier.patient?.adresse },
-    { label: 'Groupe sanguin', value: dossier.groupe_sanguin },
-    { label: 'Allergies', value: dossier.allergies || 'Aucune' },
-  ].map((item, idx) => (
-    <View key={idx} style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{item.label}</Text>
-      <Text style={styles.infoValue}>{item.value || 'Non renseigné'}</Text>
-    </View>
-  ))}
-</Section>
-
-
-            <Section title="Antécédents Médicaux" icon="folder-open" color="#7c3aed">
-              {dossier.antecedents && dossier.antecedents.length > 0 ? (
-                dossier.antecedents.map((a, idx) => (
-                  <View key={idx} style={styles.listItem}>
-                    <View style={styles.listItemContent}>
-                      <Text style={styles.listItemTitle}>{a.type}</Text>
-                      <Text style={styles.listItemSub}>{a.description} — {a.date}</Text>
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>Aucun antécédent enregistré.</Text>
-              )}
-            </Section>
+case 'infos':
+  return (
+    <View>
+      <Section title="Informations du Patient" icon="person" color="#2563eb">
+        {[
+          { label: 'Nom', value: dossier.patient?.last_name },
+          { label: 'Prénom', value: dossier.patient?.first_name },
+          { label: 'Email', value: dossier.patient?.email },
+          { label: 'Téléphone', value: dossier.patient?.telephone },
+          { label: 'Date de naissance', value: dossier.patient?.date_naissance },
+          { label: 'Adresse', value: dossier.patient?.adresse },
+          { label: 'Groupe sanguin', value: dossier.groupe_sanguin },
+          { label: 'Allergies', value: dossier.allergies || 'Aucune' },
+        ].map((item, idx) => (
+          <View key={idx} style={styles.infoRow}>
+            <Text style={styles.infoLabel}>{item.label}</Text>
+            <Text style={styles.infoValue}>{item.value || 'Non renseigné'}</Text>
           </View>
-        );
+        ))}
+      </Section>
+    </View>
+  );
 
-      case 'consultations':
+  case 'consultations':
         return (
           <View>
             <Section title="Consultations" icon="medkit" color="#059669" onAdd={() => setConsultModalVisible(true)}>

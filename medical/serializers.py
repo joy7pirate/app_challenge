@@ -116,6 +116,22 @@ class RendezVousSerializer(serializers.ModelSerializer):
         read_only_fields = ['patient']
 
 
+class RendezVousPatientSerializer(serializers.ModelSerializer):
+    medecin_nom = serializers.CharField(source='medecin.nom', read_only=True)
+    medecin_prenom = serializers.CharField(source='medecin.prenom', read_only=True)
+    medecin_specialite = serializers.CharField(source='medecin.specialite', read_only=True)
+    centre_nom = serializers.CharField(source='medecin.centre.nom', read_only=True)
+
+    class Meta:
+        model = RendezVous
+        fields = [
+            'id', 'jour', 'heure', 'statut', 'motif',
+            'medecin_nom', 'medecin_prenom', 'medecin_specialite', 'centre_nom',
+            'nouveau_jour', 'nouvelle_heure', 'commentaire_medecin',
+        ]
+
+
+
 class OrdonnanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ordonnance

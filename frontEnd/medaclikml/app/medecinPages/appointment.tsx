@@ -1,12 +1,16 @@
+// app/medecinPages/appointments.jsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, RefreshControl, ScrollView
+  TextInput, ActivityIndicator, Alert, RefreshControl, ScrollView,
+  Modal, Platform, KeyboardAvoidingView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { router } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const API_URL = "http://192.168.100.81:8000/api";
 
@@ -14,6 +18,7 @@ const STATUT_STYLE = {
   en_attente: { bg: '#FFF3E0', text: '#FF9800', label: 'EN ATTENTE' },
   confirme:   { bg: '#E8F5E9', text: '#4CAF50', label: 'CONFIRME'    },
   accepte:    { bg: '#E8F5E9', text: '#4CAF50', label: 'ACCEPTÉ'    },
+  reporte:    { bg: '#E3F2FD', text: '#2196F3', label: 'REPORTÉ'    },
   refuse:     { bg: '#FFEBEE', text: '#F44336', label: 'REFUSÉ'     },
   termine:    { bg: '#F3E5F5', text: '#9C27B0', label: 'TERMINÉ'    },
   annule:     { bg: '#FFEBEE', text: '#F44336', label: 'ANNULE'      },
@@ -23,6 +28,7 @@ const FILTRES = [
   { key: 'all',        label: 'Tous',       color: '#607D8B' },
   { key: 'en_attente', label: 'En attente', color: '#FF9800' },
   { key: 'accepte',    label: 'Accepté',    color: '#4CAF50' },
+  { key: 'reporte',    label: 'Reporté',    color: '#2196F3' },
   { key: 'refuse',     label: 'Refusé',     color: '#F44336' },
   { key: 'termine',    label: 'Terminé',    color: '#9C27B0' },
 ];
@@ -61,8 +67,18 @@ export default function AppointmentsScreen() {
   const [thisWeek, setThisWeek]       = useState(false);
   const [now, setNow]                 = useState(new Date());
   const [counts, setCounts]           = useState({
-    en_attente: 0, accepte: 0, refuse: 0, termine: 0
+    en_attente: 0, accepte: 0, reporte: 0, refuse: 0, termine: 0
   });
+
+  // ── Modal Reporter ─────────────────────────────────────────────────────────
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [rdvToReport, setRdvToReport]     = useState(null);
+  const [nouveauJour, setNouveauJour]     = useState(new Date());
+  const [nouvelleHeure, setNouvelleHeure] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [commentaire, setCommentaire]     = useState('');
+  const [submitting, setSubmitting]       = useState(false);
 
   // ── Fetch RDVs ─────────────────────────────────────────────────────────────
   const fetchRdvs = useCallback(async () => {
@@ -74,7 +90,7 @@ export default function AppointmentsScreen() {
       const data = res.data;
       setRdvs(data);
 
-      const c = { en_attente: 0, accepte: 0, refuse: 0, termine: 0 };
+      const c = { en_attente: 0, accepte: 0, reporte: 0, refuse: 0, termine: 0 };
       data.forEach(r => {
         const statut = normalizeStatut(r.statut);
         if (c[statut] !== undefined) c[statut]++;
@@ -156,6 +172,51 @@ export default function AppointmentsScreen() {
     ]);
   };
 
+  // ── Reporter un RDV ──────────────────────────────────────────────────────────
+  const openReportModal = (rdv) => {
+    setRdvToReport(rdv);
+    setNouveauJour(new Date());
+    setNouvelleHeure(new Date());
+    setCommentaire('');
+    setReportModalVisible(true);
+  };
+
+  const closeReportModal = () => {
+    setReportModalVisible(false);
+    setRdvToReport(null);
+  };
+
+  const submitReport = async () => {
+    if (!rdvToReport) return;
+
+    setSubmitting(true);
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+
+      const jourStr  = nouveauJour.toISOString().split('T')[0];
+      const heureStr = nouvelleHeure.toTimeString().slice(0, 5);
+
+      await axios.patch(
+        `${API_URL}/rendezvous/${rdvToReport.id}/statut/`,
+        {
+          statut: 'reporte',
+          nouveau_jour: jourStr,
+          nouvelle_heure: heureStr,
+          commentaire_medecin: commentaire,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      Alert.alert('Succès', 'Le rendez-vous a été reporté. Le patient doit confirmer.');
+      closeReportModal();
+      await fetchRdvs();
+    } catch (e) {
+      Alert.alert('Erreur', "Impossible de reporter ce rendez-vous.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // ── Render Card ────────────────────────────────────────────────────────────
   const renderCard = ({ item }) => {
     const normalizedStatut = normalizeStatut(item.statut);
@@ -165,7 +226,6 @@ export default function AppointmentsScreen() {
       day: '2-digit', month: 'short', year: 'numeric'
     });
     const heure = item.heure?.slice(0, 5);
-    const rdvDateTime = getRdvDateTime(item);
     const canFinish = isRdvReadyToFinish(item, now);
     const initiale = (() => {
       const first = item.patient_detail?.first_name?.trim();
@@ -220,7 +280,7 @@ export default function AppointmentsScreen() {
 
             <TouchableOpacity
               style={[styles.btn, { backgroundColor: '#F5F5F5', flex: 1 }]}
-              onPress={() => Alert.alert('Reporter', 'Fonctionnalité à venir')}
+              onPress={() => openReportModal(item)}
             >
               <Ionicons name="calendar" size={16} color="#555" />
               <Text style={[styles.btnText, { color: '#555' }]}>Reporter</Text>
@@ -231,7 +291,7 @@ export default function AppointmentsScreen() {
         {/* ── Boutons ACCEPTÉ ── */}
         {item.statut === 'accepte' && (
           <View style={styles.actions}>
-            {canFinish  ? (
+            {canFinish ? (
               <TouchableOpacity
                 style={[styles.btn, { backgroundColor: '#2196F3', flex: 1 }]}
                 onPress={() => confirmerAction(item.id, 'termine', nom)}
@@ -247,6 +307,15 @@ export default function AppointmentsScreen() {
                 </Text>
               </View>
             )}
+
+            <TouchableOpacity
+              style={[styles.btn, { backgroundColor: '#F5F5F5' }]}
+              onPress={() => openReportModal(item)}
+            >
+              <Ionicons name="calendar" size={16} color="#555" />
+              <Text style={[styles.btnText, { color: '#555' }]}>Reporter</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.btnIcon}
               onPress={() =>
@@ -258,6 +327,20 @@ export default function AppointmentsScreen() {
             >
               <Ionicons name="ellipsis-vertical" size={20} color="#555" />
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── REPORTÉ ── */}
+        {item.statut === 'reporte' && (
+          <View style={styles.reportInfo}>
+            <Ionicons name="information-circle" size={16} color="#2196F3" />
+            <Text style={styles.reportInfoText}>
+              En attente de confirmation du patient pour le{' '}
+              {item.nouveau_jour
+                ? new Date(item.nouveau_jour).toLocaleDateString('fr-FR')
+                : ''}{' '}
+              à {item.nouvelle_heure?.slice(0, 5)}
+            </Text>
           </View>
         )}
 
@@ -347,6 +430,7 @@ export default function AppointmentsScreen() {
             <View style={styles.statsGrid}>
               <StatsCard label="En attente" count={counts.en_attente} icon="time"                   color="#FF9800" statut="en_attente" />
               <StatsCard label="Acceptés"   count={counts.accepte}    icon="checkmark-circle"        color="#4CAF50" statut="accepte"    />
+              <StatsCard label="Reportés"   count={counts.reporte}    icon="calendar"                 color="#2196F3" statut="reporte"    />
               <StatsCard label="Refusés"    count={counts.refuse}     icon="close-circle"            color="#F44336" statut="refuse"     />
               <StatsCard label="Terminés"   count={counts.termine}    icon="checkmark-done-circle"   color="#9C27B0" statut="termine"    />
             </View>
@@ -417,6 +501,109 @@ export default function AppointmentsScreen() {
         }
         contentContainerStyle={{ paddingBottom: 30 }}
       />
+
+      {/* ── Modal Reporter ── */}
+      <Modal
+        visible={reportModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeReportModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Reporter le rendez-vous</Text>
+              <TouchableOpacity onPress={closeReportModal}>
+                <Ionicons name="close" size={24} color="#555" />
+              </TouchableOpacity>
+            </View>
+
+            {rdvToReport && (
+              <Text style={styles.modalSubtitle}>
+                Patient : {`${rdvToReport.patient_detail?.first_name || ''} ${rdvToReport.patient_detail?.last_name || ''}`.trim() || 'Patient'}
+              </Text>
+            )}
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalLabel}>Nouvelle date</Text>
+              <TouchableOpacity
+                style={styles.pickerBtn}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Ionicons name="calendar-outline" size={18} color="#2196F3" />
+                <Text style={styles.pickerBtnText}>
+                  {nouveauJour.toLocaleDateString('fr-FR')}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={nouveauJour}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) setNouveauJour(selectedDate);
+                  }}
+                />
+              )}
+
+              <Text style={styles.modalLabel}>Nouvelle heure</Text>
+              <TouchableOpacity
+                style={styles.pickerBtn}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Ionicons name="time-outline" size={18} color="#2196F3" />
+                <Text style={styles.pickerBtnText}>
+                  {nouvelleHeure.toTimeString().slice(0, 5)}
+                </Text>
+              </TouchableOpacity>
+              {showTimePicker && (
+                <DateTimePicker
+                  value={nouvelleHeure}
+                  mode="time"
+                  is24Hour
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event, selectedTime) => {
+                    setShowTimePicker(Platform.OS === 'ios');
+                    if (selectedTime) setNouvelleHeure(selectedTime);
+                  }}
+                />
+              )}
+
+              <Text style={styles.modalLabel}>Commentaire (optionnel)</Text>
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Raison du report, précisions..."
+                placeholderTextColor="#aaa"
+                value={commentaire}
+                onChangeText={setCommentaire}
+                multiline
+                numberOfLines={3}
+              />
+
+              <TouchableOpacity
+                style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
+                onPress={submitReport}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                    <Text style={styles.submitBtnText}>Envoyer la proposition</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </View>
   );
 }
@@ -460,8 +647,24 @@ const styles = StyleSheet.create({
   btnText:         { color: '#fff', fontWeight: '600', fontSize: 13 },
   btnIcon:         { backgroundColor: '#F5F5F5', padding: 10, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 
+  reportInfo:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E3F2FD', padding: 10, borderRadius: 10, marginTop: 12, gap: 6 },
+  reportInfoText:  { fontSize: 12, color: '#1565C0', flex: 1 },
+
   dossierBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', gap: 6 },
   dossierBtnText:  { color: '#2563eb', fontWeight: '600', fontSize: 13 },
 
   emptyText:       { color: '#bbb', marginTop: 12, fontSize: 16 },
+
+  // Modal Reporter
+  modalOverlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent:    { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '85%' },
+  modalHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  modalTitle:      { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
+  modalSubtitle:   { fontSize: 13, color: '#888', marginBottom: 12 },
+  modalLabel:      { fontSize: 13, fontWeight: '600', color: '#555', marginTop: 14, marginBottom: 6 },
+  pickerBtn:       { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F5F5F5', padding: 12, borderRadius: 10 },
+  pickerBtnText:   { fontSize: 14, color: '#333' },
+  commentInput:    { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 12, fontSize: 14, color: '#333', textAlignVertical: 'top', minHeight: 80 },
+  submitBtn:       { flexDirection: 'row', backgroundColor: '#2196F3', padding: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 20, marginBottom: 10 },
+  submitBtnText:   { color: '#fff', fontWeight: '700', fontSize: 14 },
 });

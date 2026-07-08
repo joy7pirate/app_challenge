@@ -70,9 +70,21 @@ export default function MedecinLayout() {
               size={24}
               color={color}
             />
+            
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="dossierPatient"
+        options={{
+          href: null,
+          
+          
+          
+        }}
+      />
+
     </Tabs>
   );
 }

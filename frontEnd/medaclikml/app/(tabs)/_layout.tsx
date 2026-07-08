@@ -24,6 +24,18 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+<Tabs.Screen
+        name="mesRDV"
+        options={{
+          title: 'Mes Rendez-vous',
+          headerShown: false,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="alarm" size={24} color={color} />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="profile"
         options={{
@@ -34,6 +46,10 @@ export default function TabsLayout() {
           ),
         }}
       />
+       
     </Tabs>
+
+
+    
   );
 }

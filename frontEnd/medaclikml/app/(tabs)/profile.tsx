@@ -126,7 +126,7 @@ const handleSave = async () => {
           style: 'destructive',
           onPress: async () => {
             await AsyncStorage.clear();
-            router.replace('/login');
+            router.replace('../LoginScreen');
           },
         },
       ]
@@ -151,6 +151,7 @@ const handleSave = async () => {
 
   if (!patient) {
     return (
+      <>
       <View style={styles.centerContainer}>
         <Ionicons name="alert-circle-outline" size={60} color="#ccc" />
         <Text style={styles.errorText}>Profil introuvable</Text>
@@ -158,6 +159,15 @@ const handleSave = async () => {
           <Text style={styles.retryButtonText}>Réessayer</Text>
         </TouchableOpacity>
       </View>
+
+
+<TouchableOpacity onPress={async () => {
+  await AsyncStorage.clear();
+  console.log('Déconnecté !');
+}}>
+  <Text>DEBUG LOGOUT</Text>
+</TouchableOpacity>
+</>
     );
   }
 
@@ -175,6 +185,9 @@ const handleSave = async () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2E86DE']} />
         }
       >
+
+
+
         {/* Header avec avatar */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -335,7 +348,7 @@ const handleSave = async () => {
 
           <TouchableOpacity
             style={styles.actionRow}
-            onPress={() => router.push('/patientPages/mesRendezVous')}
+            onPress={() => router.push('/mesRDV')}
           >
             <View style={[styles.infoIconContainer, { backgroundColor: '#e8f4fd' }]}>
               <Ionicons name="calendar-outline" size={18} color="#2E86DE" />
@@ -346,7 +359,7 @@ const handleSave = async () => {
 
           <TouchableOpacity
             style={styles.actionRow}
-            onPress={() => router.push('/patientPages/mesDocuments')}
+            onPress={() => router.push('/patientPages/dossier')}
           >
             <View style={[styles.infoIconContainer, { backgroundColor: '#e8f4fd' }]}>
               <Ionicons name="document-text-outline" size={18} color="#2E86DE" />
@@ -376,6 +389,9 @@ const handleSave = async () => {
         <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
+
+
+
   );
 }
 

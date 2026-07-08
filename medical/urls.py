@@ -13,6 +13,8 @@ from .views import (
     DisponibiliteDetailView,
     RendezVousListCreateView,
     RendezVousDetailView,
+    RendezVousPatientListView,        
+    RepondreContrePropositionView,    
     RegisterView,
     login_view,
     DossierPatientView,
@@ -57,6 +59,10 @@ urlpatterns = [
     path('ordonnances/<int:ordonnance_id>/', OrdonnanceDetailView.as_view(), name='ordonnance-detail'),
     path('examens/create/', ExamenCreateView.as_view(), name='examen-create'),
     path('examens/<int:examen_id>/resultat/', ExamenResultUpdateView.as_view(), name='examen-resultat'),
+
+
+    path('rendezvous/patient/', RendezVousPatientListView.as_view(), name='rendezvous-patient-list'),
+    path('rendezvous/<int:rdv_id>/repondre/', RepondreContrePropositionView.as_view(), name='rendezvous-repondre'),
 
 
       path('patients/', PatientViewSet.as_view({
