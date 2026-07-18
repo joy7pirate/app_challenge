@@ -1,0 +1,2 @@
+app/(tabs)/centre.tsx
+app/centresProches.tsx

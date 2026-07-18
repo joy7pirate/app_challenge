@@ -10,9 +10,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Feather from '@expo/vector-icons/Feather';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Entypo from '@expo/vector-icons/Entypo';
-import axios from 'axios';
-
-const API_URL = "http://192.168.100.81:8000/api";
+import API_ENDPOINTS, { api } from '../../config/api';
 
 export default function MedecinProfileScreen() {
   const router = useRouter();
@@ -24,29 +22,32 @@ export default function MedecinProfileScreen() {
   // ── Fetch Profile ────────────────────────────────────────────────────────
   const fetchProfile = async () => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
+      const token = await AsyncStorage.getItem('authToken');
       if (!token) {
         router.replace('/LoginScreen');
         return;
       }
 
-      const res = await axios.get(`${API_URL}/auth/me/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      const res = await api.get(API_ENDPOINTS.AUTH.ME);
       setProfile(res.data);
       console.log('Profil médecin:', res.data);
 
       // Fetch centres if medecin_id exists
       if (res.data.medecin_id) {
-        const centresRes = await axios.get(`${API_URL}/centres/`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const centresRes = await api.get(API_ENDPOINTS.CENTRES.LIST, {
           params: { medecin: res.data.medecin_id }
         });
         setCentres(centresRes.data || []);
       }
     } catch (error) {
-      console.log('Erreur fetch profile:', error.response?.data || error.message);
+      console.log('Erreur fetch profile:', error?.response?.data || error.message);
+
+      if (error.response?.status === 401) {
+        await AsyncStorage.multiRemove(['authToken', 'refreshToken', 'role']);
+        router.replace('/LoginScreen');
+        return;
+      }
+
       Alert.alert('Erreur', 'Impossible de charger le profil');
     } finally {
       setLoading(false);
@@ -73,8 +74,7 @@ export default function MedecinProfileScreen() {
           text: 'Déconnecter',
           style: 'destructive',
           onPress: async () => {
-            await AsyncStorage.removeItem('access_token');
-            await AsyncStorage.removeItem('role');
+            await AsyncStorage.multiRemove(['authToken', 'refreshToken', 'role']);
             router.replace('/LoginScreen');
           }
         }
@@ -202,7 +202,7 @@ export default function MedecinProfileScreen() {
 
         <TouchableOpacity
           style={styles.buttonSecondary}
-          onPress={() => router.push('/medecinPages/appointment')}
+          onPress={() => router.push('/medecinPages/appointments')}
         >
           <Ionicons name="clipboard-outline" size={20} color="#2563eb" />
           <Text style={styles.buttonSecondaryText}>Mes rendez-vous</Text>

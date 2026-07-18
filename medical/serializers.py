@@ -131,6 +131,34 @@ class RendezVousPatientSerializer(serializers.ModelSerializer):
         ]
 
 
+class RendezVousMedecinSerializer(serializers.ModelSerializer):
+    """
+    Serializer utilisé pour la liste des RDV du médecin (GET /api/rendezvous/medecin/).
+    Il ajoute des informations sur la consultation liée (statut + id) afin que le
+    frontend puisse afficher le bouton "Terminer" ou un badge "Terminée".
+    """
+    patient_detail = PatientSerializer(source='patient', read_only=True)
+    medecin_detail = MedecinSimpleSerializer(source='medecin', read_only=True)
+    # Infos de la consultation liée au RDV (None si pas de consultation créée)
+    consultation_id = serializers.SerializerMethodField()
+    consultation_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RendezVous
+        fields = ['id', 'patient', 'medecin', 'jour', 'heure', 'motif', 'statut',
+                  'patient_detail', 'medecin_detail', 'consultation_id', 'consultation_status']
+        read_only_fields = ['patient']
+
+    def get_consultation_id(self, obj):
+        # obj.consultation existe grâce au related_name='consultation' (OneToOne)
+        consultation = getattr(obj, 'consultation', None)
+        return consultation.id if consultation else None
+
+    def get_consultation_status(self, obj):
+        consultation = getattr(obj, 'consultation', None)
+        return consultation.statut_consultation if consultation else None
+
+
 
 class OrdonnanceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -154,8 +182,11 @@ class ConsultationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Consultation
-        fields = ['id', 'dossier_medical', 'rdv', 'medecin', 'medecin_detail', 'date', 'motif', 'diagnostic', 'traitement', 'notes', 'is_verrouille', 'ordonnance_detail']
-        read_only_fields = ['date', 'is_verrouille']
+        # On ajoute les nouveaux champs : statut_consultation et date_cloture
+        fields = ['id', 'dossier_medical', 'rdv', 'medecin', 'medecin_detail', 'date', 'motif', 'diagnostic', 'traitement', 'notes', 'is_verrouille', 'ordonnance_detail', 'statut_consultation', 'date_cloture']
+        # statut_consultation et date_cloture sont gérés par la vue "terminer", on les met en read_only
+        # pour éviter qu'un médecin ne les modifie directement via update classique
+        read_only_fields = ['date', 'is_verrouille', 'statut_consultation', 'date_cloture']
 
     def validate(self, attrs):
         instance = getattr(self, 'instance', None)

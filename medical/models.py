@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User  # ← AJOUTER
+from django.utils import timezone  # ← AJOUT pour date_cloture
 
 
 class CentreSante(models.Model):
@@ -61,18 +62,26 @@ class RendezVous(models.Model):
     jour = models.DateField()                                        
     heure = models.TimeField()                                       
     motif = models.TextField()                                       
-    statut = models.CharField(                                       
+    statut = models.CharField(                                        
         max_length=20, 
         choices=STATUT_CHOICES, 
         default='en_attente'
     )
-
     nouveau_jour = models.DateField(blank=True, null=True)
     nouvelle_heure = models.TimeField(blank=True, null=True)
     commentaire_medecin = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"RDV {self.patient} - Dr {self.medecin} le {self.jour}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['medecin', 'jour', 'heure'],
+                condition=models.Q(statut__in=['en_attente', 'confirme']),
+                name='unique_active_rdv_per_slot'
+            )
+        ]
 
 class DossierMedical(models.Model):
     patient = models.OneToOneField(Patient, on_delete=models.CASCADE, related_name='dossiermedical')
@@ -88,6 +97,21 @@ class DossierMedical(models.Model):
 
 
 class Consultation(models.Model):
+    # --- Nouveaux champs pour la clôture de consultation ---
+    STATUT_CONSULTATION_CHOICES = [
+        ('en_cours', 'En cours'),
+        ('terminee', 'Terminée'),
+    ]
+    # Statut de la consultation : "en_cours" par défaut, passe à "terminee" quand le médecin clôture
+    statut_consultation = models.CharField(
+        max_length=20,
+        choices=STATUT_CONSULTATION_CHOICES,
+        default='en_cours',
+    )
+    # Date/heure à laquelle le médecin a clôturé la consultation (null tant qu'elle est en cours)
+    date_cloture = models.DateTimeField(null=True, blank=True)
+    # --------------------------------------------------------
+
     dossier_medical = models.ForeignKey(DossierMedical, on_delete=models.CASCADE, related_name='consultations')
     rdv = models.OneToOneField(RendezVous, on_delete=models.CASCADE, related_name='consultation', null=True, blank=True)
     medecin = models.ForeignKey(Medecin, on_delete=models.CASCADE, related_name='consultations')

@@ -1,3 +1,5 @@
+// app/patientPages/CentresProchesScreen.jsx (ajustez le nom selon votre fichier)
+
 import React, { useEffect, useState, useCallback } from 'react';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import {
@@ -15,8 +17,9 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getDistanceKm, formatDistance, openGoogleMapsDirections, sortCentresByDistance } from '../../utils/geolocation';
-import { API_BASE_URL } from '../../constants/api';
+import API_ENDPOINTS, { api } from '../../config/api';
 import theme from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
@@ -38,7 +41,6 @@ export default function CentresProchesScreen() {
     try {
       setError(null);
 
-      // Demander la permission
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
@@ -50,7 +52,6 @@ export default function CentresProchesScreen() {
 
       setLocationPermission('granted');
 
-      // Récupérer la position actuelle
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -72,14 +73,13 @@ export default function CentresProchesScreen() {
   const fetchCentres = useCallback(async () => {
     try {
       setLoadingError(null);
-      const response = await fetch(`${API_BASE_URL}/centres/`);
+      const token = await AsyncStorage.getItem('access_token');
 
-      if (!response.ok) {
-        throw new Error(`Erreur API: ${response.status}`);
-      }
+      const response = await api.get(API_ENDPOINTS.CENTRES.LIST, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
 
-      const data = await response.json();
-      setCentres(data);
+      setCentres(response.data);
     } catch (err) {
       console.error('Erreur lors de la récupération des centres:', err);
       setLoadingError('Impossible de charger les centres. Vérifiez votre connexion.');
@@ -98,6 +98,9 @@ export default function CentresProchesScreen() {
         userLocation.longitude
       );
       setCentresTries(sorted);
+      setLoading(false);
+      setRefreshing(false);
+    } else if (userLocation && centres.length === 0) {
       setLoading(false);
       setRefreshing(false);
     }
@@ -135,7 +138,7 @@ export default function CentresProchesScreen() {
     } catch (err) {
       Alert.alert(
         'Erreur',
-        'Impossible d\'ouvrir Google Maps. Vérifiez que l\'application est installée ou que vous avez une connexion Internet.'
+        "Impossible d'ouvrir Google Maps. Vérifiez que l'application est installée ou que vous avez une connexion Internet."
       );
     }
   };
@@ -190,7 +193,6 @@ export default function CentresProchesScreen() {
             {distance && (
               <View style={styles.distanceRow}>
                 <MaterialCommunityIcons name="map-marker-distance" size={16} color={theme.colors.accent} />
-                {/* <MaterialIcons name="distance" size={16} color={theme.colors.accent} /> */}
                 <Text style={styles.distanceText}>
                   {distance} km de votre position
                 </Text>
@@ -207,9 +209,6 @@ export default function CentresProchesScreen() {
     );
   };
 
-  /**
-   * Composant pour afficher le message d'erreur de permission
-   */
   const PermissionDeniedView = () => (
     <View style={styles.centerContainer}>
       <MaterialIcons name="location-off" size={60} color={theme.colors.secondary} />
@@ -231,9 +230,6 @@ export default function CentresProchesScreen() {
     </View>
   );
 
-  /**
-   * Composant pour afficher le message d'erreur de chargement
-   */
   const ErrorView = () => (
     <View style={styles.centerContainer}>
       <MaterialIcons name="error-outline" size={60} color={theme.colors.secondary} />
@@ -244,9 +240,6 @@ export default function CentresProchesScreen() {
     </View>
   );
 
-  /**
-   * Composant pour afficher le message "Aucun centre trouvé"
-   */
   const EmptyView = () => (
     <View style={styles.centerContainer}>
       <MaterialIcons name="store-mall-directory" size={60} color={theme.colors.secondary} />
@@ -260,7 +253,6 @@ export default function CentresProchesScreen() {
     </View>
   );
 
-  // Vue de chargement
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -270,22 +262,18 @@ export default function CentresProchesScreen() {
     );
   }
 
-  // Vue d'erreur de permission
   if (locationPermission === 'denied') {
     return <PermissionDeniedView />;
   }
 
-  // Vue d'erreur générale
   if (error || loadingError) {
     return <ErrorView />;
   }
 
-  // Vue vide
   if (centresTries.length === 0) {
     return <EmptyView />;
   }
 
-  // Vue principale
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>

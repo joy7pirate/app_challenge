@@ -1,18 +1,13 @@
-// app/medecinPages/dossierPatient.jsx
-
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput,
   TouchableOpacity, ActivityIndicator, Alert, Modal,
-  KeyboardAvoidingView, Platform, Linking
+  KeyboardAvoidingView, Platform, RefreshControl
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-
-const API_URL = 'http://192.168.100.81:8000/api';
+import { api, apiService } from '../../config/api'; // ✅ chemin à adapter si besoin
 
 // ── Composant Section ──────────────────────────────────────────────────────
 const Section = ({ title, icon, color, children, onAdd }) => (
@@ -86,18 +81,13 @@ const ConsultModal = ({ visible, onClose, selectedRdvId, setSelectedConsultation
       return;
     }
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      const res = await axios.post(
-        `${API_URL}/consultations/create/`,
-        {
-          rdv: selectedRdvId,
-          motif: consultForm.motif,
-          diagnostic: consultForm.diagnostic,
-          traitement: consultForm.traitement,
-          notes: consultForm.notes,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post('/consultations/create/', {
+        rdv: selectedRdvId,
+        motif: consultForm.motif,
+        diagnostic: consultForm.diagnostic,
+        traitement: consultForm.traitement,
+        notes: consultForm.notes,
+      });
 
       const nouvelleConsultationId = res.data.id;
       console.log('✅ Consultation créée, ID réel :', nouvelleConsultationId);
@@ -158,9 +148,6 @@ const OrdoModal = ({ visible, onClose, selectedConsultationId, fetchDossier }) =
       return;
     }
     try {
-      console.log('📤 ID envoyé pour ordonnance (selectedConsultationId):', selectedConsultationId);
-
-      const token = await AsyncStorage.getItem('access_token');
       const payload = {
         consultation: selectedConsultationId,
         medicaments: ordoForm.medicaments,
@@ -171,9 +158,8 @@ const OrdoModal = ({ visible, onClose, selectedConsultationId, fetchDossier }) =
 
       console.log('📡 Payload ordonnance:', payload);
 
-      await axios.post(`${API_URL}/ordonnances/create/`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.post('/ordonnances/create/', payload);
+
       Alert.alert('Succès', 'Ordonnance créée avec succès !');
       setOrdoForm({ medicaments: '', posologie: '', duree: '', instructions: '' });
       onClose();
@@ -239,7 +225,6 @@ const ExamenModal = ({ visible, onClose, selectedPatientId, fetchDossier }) => {
       return;
     }
     try {
-      const token = await AsyncStorage.getItem('access_token');
       const formData = new FormData();
       formData.append('type_examen', examenForm.type_examen);
       formData.append('description', examenForm.description);
@@ -253,11 +238,8 @@ const ExamenModal = ({ visible, onClose, selectedPatientId, fetchDossier }) => {
         });
       }
 
-      await axios.post(`${API_URL}/examens/create/`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
+      await api.post('/examens/create/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       Alert.alert('Succès', 'Examen ajouté avec succès !');
@@ -330,198 +312,260 @@ export default function DossierMedicalScreen() {
 
   const [dossier, setDossier] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('infos');
+
   const [consultModalVisible, setConsultModalVisible] = useState(false);
   const [ordoModalVisible, setOrdoModalVisible] = useState(false);
   const [examenModalVisible, setExamenModalVisible] = useState(false);
-
-  // ⚠️ Ne JAMAIS initialiser avec selectedRdvId : il s'agit d'un ID de Consultation, pas de RDV
   const [selectedConsultationId, setSelectedConsultationId] = useState(null);
 
+  // ── Récupération du dossier patient ────────────────────────────────────
   const fetchDossier = useCallback(async () => {
+    if (!selectedPatientId) {
+      setError('Aucun patient sélectionné.');
+      setLoading(false);
+      return;
+    }
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) {
-        setError('Aucun token d’authentification trouvé.');
-        setLoading(false);
-        return;
-      }
-
-      if (!selectedPatientId || Number.isNaN(selectedPatientId)) {
-        setError('Aucun patient sélectionné.');
-        setLoading(false);
-        return;
-      }
-
-      const response = await axios.get(`${API_URL}/medecin/patient/${selectedPatientId}/dossier/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      setError('');
+      const response = await apiService.getPatientDossier(selectedPatientId);
       setDossier(response.data);
-
-      // 🔑 Resynchronise selectedConsultationId avec la vraie consultation liée au rdv courant
-      if (selectedRdvId && response.data?.consultations?.length > 0) {
-        const consultationDuRdv = response.data.consultations.find(
-          (c) => c.rdv === selectedRdvId || c.rdv_id === selectedRdvId || c.rendez_vous === selectedRdvId
-        );
-        if (consultationDuRdv) {
-          console.log('🔄 Consultation retrouvée pour ce rdv :', consultationDuRdv.id);
-          setSelectedConsultationId(consultationDuRdv.id);
-        } else {
-          // Aucune consultation liée à ce rdv précis : on prend la plus récente par sécurité (optionnel)
-          setSelectedConsultationId(null);
-        }
-      }
     } catch (err) {
       console.error('Erreur chargement dossier :', err);
-      setError('Impossible de charger le dossier médical.');
+      if (err.code === 'ECONNABORTED') {
+        setError('Le serveur ne répond pas (timeout). Vérifiez votre connexion.');
+      } else if (err.response?.status === 404) {
+        setError('Dossier patient introuvable.');
+      } else if (err.response?.status === 401) {
+        setError('Session expirée. Veuillez vous reconnecter.');
+      } else {
+        setError(err.response?.data?.detail || 'Impossible de charger le dossier.');
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [selectedPatientId, selectedRdvId]);
+  }, [selectedPatientId]);
 
   useEffect(() => {
     fetchDossier();
   }, [fetchDossier]);
 
-  // ── Rendu du contenu par onglet ───────────────────────────────────────────
-  const renderTabContent = () => {
-    if (!dossier) return null;
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchDossier();
+  };
 
-    switch (activeTab) {
-case 'infos':
-  return (
-    <View>
-      <Section title="Informations du Patient" icon="person" color="#2563eb">
-        {[
-          { label: 'Nom', value: dossier.patient?.last_name },
-          { label: 'Prénom', value: dossier.patient?.first_name },
-          { label: 'Email', value: dossier.patient?.email },
-          { label: 'Téléphone', value: dossier.patient?.telephone },
-          { label: 'Date de naissance', value: dossier.patient?.date_naissance },
-          { label: 'Adresse', value: dossier.patient?.adresse },
-          { label: 'Groupe sanguin', value: dossier.groupe_sanguin },
-          { label: 'Allergies', value: dossier.allergies || 'Aucune' },
-        ].map((item, idx) => (
-          <View key={idx} style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{item.label}</Text>
-            <Text style={styles.infoValue}>{item.value || 'Non renseigné'}</Text>
-          </View>
-        ))}
-      </Section>
-    </View>
-  );
+  // ── Gestion ouverture modales ───────────────────────────────────────────
+  const ouvrirModalConsultation = () => {
+    if (!selectedRdvId) {
+      Alert.alert('Info', 'Aucun rendez-vous associé pour créer une consultation.');
+      return;
+    }
+    setConsultModalVisible(true);
+  };
 
-  case 'consultations':
-        return (
-          <View>
-            <Section title="Consultations" icon="medkit" color="#059669" onAdd={() => setConsultModalVisible(true)}>
-              {dossier.consultations && dossier.consultations.length > 0 ? (
-                dossier.consultations.map((c, idx) => (
-                  <View key={idx} style={styles.listItem}>
-                    <View style={styles.listItemHeader}>
-                      <Text style={styles.listItemTitle}>{c.diagnostic || 'Sans diagnostic'}</Text>
-                      <Text style={styles.listItemDate}>{c.date}</Text>
-                    </View>
-                    {c.traitement && <Text style={styles.listItemSub}>Traitement : {c.traitement}</Text>}
-                    {c.notes && <Text style={styles.listItemSub}>Notes : {c.notes}</Text>}
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>Aucune consultation enregistrée.</Text>
-              )}
-            </Section>
+  const ouvrirModalOrdonnance = (consultationId) => {
+    if (!consultationId) {
+      Alert.alert('Info', "Créez d'abord une consultation pour ajouter une ordonnance.");
+      return;
+    }
+    setSelectedConsultationId(consultationId);
+    setOrdoModalVisible(true);
+  };
 
-            <Section title="Ordonnances" icon="document-text" color="#d97706" onAdd={() => setOrdoModalVisible(true)}>
-              {dossier.ordonnances && dossier.ordonnances.length > 0 ? (
-                dossier.ordonnances.map((o, idx) => (
-                  <View key={idx} style={styles.listItem}>
-                    <Text style={styles.listItemTitle}>{o.medicaments}</Text>
-                    {o.posologie && <Text style={styles.listItemSub}>Posologie : {o.posologie}</Text>}
-                    {o.duree && <Text style={styles.listItemSub}>Durée : {o.duree}</Text>}
-                    {o.instructions && <Text style={styles.listItemSub}>Instructions : {o.instructions}</Text>}
-                    <Text style={styles.listItemDate}>{o.date}</Text>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>Aucune ordonnance enregistrée.</Text>
-              )}
-            </Section>
-          </View>
-        );
+  const ouvrirModalExamen = () => {
+    if (!selectedPatientId) {
+      Alert.alert('Erreur', 'Patient introuvable.');
+      return;
+    }
+    setExamenModalVisible(true);
+  };
 
-      case 'examens':
-        return (
-          <View>
-            <Section title="Examens" icon="analytics" color="#0891b2" onAdd={() => setExamenModalVisible(true)}>
-              {dossier.examens && dossier.examens.length > 0 ? (
-                dossier.examens.map((e, idx) => (
-                  <View key={idx} style={styles.listItem}>
-                    <View style={styles.listItemHeader}>
-                      <Text style={styles.listItemTitle}>{e.description}</Text>
-                      <Tag text={e.type_examen} color="#0891b2" />
-                    </View>
-                    {e.resultat && <Text style={styles.listItemSub}>Résultat : {e.resultat}</Text>}
-                    <Text style={styles.listItemDate}>{e.date}</Text>
-                    {e.fichier && (
-                      <TouchableOpacity style={styles.ordoAddBtn} onPress={() => Linking.openURL(e.fichier)}>
-                        <Ionicons name="document-attach-outline" size={16} color="#dc2626" />
-                        <Text style={{ color: '#dc2626', fontSize: 13, fontWeight: '500', marginLeft: 6 }}>Voir le fichier</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>Aucun examen enregistré.</Text>
-              )}
-            </Section>
-          </View>
-        );
-
-      default:
-        return null;
+  // ── Statut couleur ───────────────────────────────────────────────────────
+  const getStatutColor = (statut) => {
+    switch (statut) {
+      case 'confirme': return '#059669';
+      case 'en_attente': return '#f59e0b';
+      case 'annule': return '#dc2626';
+      case 'termine': return '#6b7280';
+      default: return '#6b7280';
     }
   };
 
-  // ── Rendu principal ────────────────────────────────────────────────────────
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#dc2626" /></View>;
-  if (error) return (
-    <View style={styles.center}>
-      <Ionicons name="alert-circle" size={48} color="#dc2626" />
-      <Text style={styles.errorText}>{error}</Text>
-    </View>
-  );
+  // ── États de chargement / erreur ─────────────────────────────────────────
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#dc2626" />
+        <Text style={styles.loadingText}>Chargement du dossier...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#dc2626" />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={fetchDossier}>
+          <Text style={styles.retryBtnText}>Réessayer</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 12 }}>
+          <Text style={{ color: '#6b7280' }}>Retour</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const patient = dossier?.patient || {};
+  const consultations = dossier?.consultations || [];
+  const ordonnances = dossier?.ordonnances || [];
+  const examens = dossier?.examens || [];
 
   return (
     <View style={styles.container}>
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dossier Médical</Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>
+            {patient.prenom || ''} {patient.nom || 'Dossier patient'}
+          </Text>
+          <Text style={styles.headerSubtitle}>
+            {patient.telephone || ''}
+          </Text>
+        </View>
       </View>
 
+      {/* ── Tabs ── */}
       <View style={styles.tabBar}>
         {[
-          { key: 'infos', label: 'Infos', icon: 'information-circle' },
-          { key: 'consultations', label: 'Consultations', icon: 'medkit' },
-          { key: 'examens', label: 'Examens', icon: 'analytics' },
+          { key: 'infos', label: 'Infos', icon: 'person-outline' },
+          { key: 'consultations', label: 'Consultations', icon: 'medkit-outline' },
+          { key: 'ordonnances', label: 'Ordonnances', icon: 'document-text-outline' },
+          { key: 'examens', label: 'Examens', icon: 'flask-outline' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             onPress={() => setActiveTab(tab.key)}
           >
-            <Ionicons name={tab.icon} size={20} color={activeTab === tab.key ? '#dc2626' : '#6b7280'} />
+            <Ionicons name={tab.icon} size={16} color={activeTab === tab.key ? '#dc2626' : '#6b7280'} />
             <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>{tab.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
-        {renderTabContent()}
+      {/* ── Contenu ── */}
+      <ScrollView
+        style={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#dc2626']} />}
+      >
+        {activeTab === 'infos' && (
+          <Section title="Informations Patient" icon="person" color="#dc2626">
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Nom complet</Text>
+              <Text style={styles.infoValue}>{patient.prenom} {patient.nom}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Téléphone</Text>
+              <Text style={styles.infoValue}>{patient.telephone || '—'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoValue}>{patient.email || '—'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Date de naissance</Text>
+              <Text style={styles.infoValue}>{patient.date_naissance || '—'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Sexe</Text>
+              <Text style={styles.infoValue}>{patient.sexe || '—'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Groupe sanguin</Text>
+              <Text style={styles.infoValue}>{patient.groupe_sanguin || '—'}</Text>
+            </View>
+            <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.infoLabel}>Allergies</Text>
+              <Text style={styles.infoValue}>{patient.allergies || 'Aucune connue'}</Text>
+            </View>
+          </Section>
+        )}
+
+        {activeTab === 'consultations' && (
+          <Section title="Consultations" icon="medkit" color="#dc2626" onAdd={ouvrirModalConsultation}>
+            {consultations.length === 0 ? (
+              <Text style={styles.emptyText}>Aucune consultation enregistrée.</Text>
+            ) : (
+              consultations.map((c) => (
+                <View key={c.id} style={styles.listItem}>
+                  <View style={styles.listItemHeader}>
+                    <Text style={styles.listItemTitle}>{c.diagnostic}</Text>
+                    <Tag text={c.motif || 'Consultation'} color="#dc2626" />
+                  </View>
+                  {c.traitement && <Text style={styles.listItemSub}>Traitement : {c.traitement}</Text>}
+                  {c.notes && <Text style={styles.listItemSub}>Notes : {c.notes}</Text>}
+                  <Text style={styles.listItemDate}>{c.date_creation || c.created_at || ''}</Text>
+                  <TouchableOpacity style={styles.ordoAddBtn} onPress={() => ouvrirModalOrdonnance(c.id)}>
+                    <Ionicons name="add-circle-outline" size={16} color="#059669" />
+                    <Text style={{ color: '#059669', fontSize: 12, fontWeight: '600', marginLeft: 4 }}>
+                      Ajouter Ordonnance
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </Section>
+        )}
+
+        {activeTab === 'ordonnances' && (
+          <Section title="Ordonnances" icon="document-text" color="#059669">
+            {ordonnances.length === 0 ? (
+              <Text style={styles.emptyText}>Aucune ordonnance enregistrée.</Text>
+            ) : (
+              ordonnances.map((o) => (
+                <View key={o.id} style={styles.listItem}>
+                  <View style={styles.listItemHeader}>
+                    <Text style={styles.listItemTitle}>{o.medicaments}</Text>
+                  </View>
+                  {o.posologie && <Text style={styles.listItemSub}>Posologie : {o.posologie}</Text>}
+                  {o.duree && <Text style={styles.listItemSub}>Durée : {o.duree}</Text>}
+                  {o.instructions && <Text style={styles.listItemSub}>Instructions : {o.instructions}</Text>}
+                  <Text style={styles.listItemDate}>{o.date_creation || o.created_at || ''}</Text>
+                </View>
+              ))
+            )}
+          </Section>
+        )}
+
+        {activeTab === 'examens' && (
+          <Section title="Examens" icon="flask" color="#7c3aed" onAdd={ouvrirModalExamen}>
+            {examens.length === 0 ? (
+              <Text style={styles.emptyText}>Aucun examen enregistré.</Text>
+            ) : (
+              examens.map((e) => (
+                <View key={e.id} style={styles.listItem}>
+                  <View style={styles.listItemHeader}>
+                    <Text style={styles.listItemTitle}>{e.description}</Text>
+                    <Tag text={e.type_examen} color="#7c3aed" />
+                  </View>
+                  {e.resultat && <Text style={styles.listItemSub}>Résultat : {e.resultat}</Text>}
+                  <Text style={styles.listItemDate}>{e.date_creation || e.created_at || ''}</Text>
+                </View>
+              ))
+            )}
+          </Section>
+        )}
       </ScrollView>
 
+      {/* ── Modales ── */}
       <ConsultModal
         visible={consultModalVisible}
         onClose={() => setConsultModalVisible(false)}
@@ -545,21 +589,37 @@ case 'infos':
   );
 }
 
-// ── Styles ──────────────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3f4f6' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f3f4f6' },
-  errorText: { marginTop: 12, fontSize: 15, color: '#dc2626', textAlign: 'center' },
 
-  header: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#dc2626', paddingTop: 50, paddingBottom: 16, paddingHorizontal: 16 },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff', marginLeft: 12 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20, paddingBottom: 16,
+    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
+  },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  headerSubtitle: { fontSize: 12, color: '#6b7280', marginTop: 2 },
 
-  tabBar: { flexDirection: 'row', backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 6 },
+  tabBar: {
+    flexDirection: 'row', backgroundColor: '#fff',
+    borderBottomWidth: 1, borderBottomColor: '#e5e7eb',
+  },
+  tab: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 12, gap: 4,
+  },
   tabActive: { borderBottomWidth: 2, borderBottomColor: '#dc2626' },
-  tabText: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
-  tabTextActive: { color: '#dc2626' },
+  tabText: { fontSize: 11, color: '#6b7280', fontWeight: '500' },
+  tabTextActive: { color: '#dc2626', fontWeight: '700' },
+
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
+  loadingText: { marginTop: 12, color: '#6b7280', fontSize: 14 },
+
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', padding: 24 },
+  errorText: { marginTop: 12, color: '#374151', fontSize: 14, textAlign: 'center' },
+  retryBtn: { marginTop: 16, backgroundColor: '#dc2626', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
+  retryBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
   content: { flex: 1, padding: 16 },
 
@@ -576,7 +636,7 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 13, color: '#6b7280', fontWeight: '500' },
   infoValue: { fontSize: 13, color: '#111827', fontWeight: '600', textAlign: 'right', flex: 1, marginLeft: 8 },
 
-  listItem: { backgroundColor: '#f9fafb', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#e5e7eb' },
+  listItem: { backgroundColor: '#f9fafb', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 8 },
   listItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   listItemContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   listItemTitle: { fontSize: 14, fontWeight: '600', color: '#111827', flex: 1 },

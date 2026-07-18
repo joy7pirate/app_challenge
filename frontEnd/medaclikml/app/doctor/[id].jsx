@@ -10,8 +10,8 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import EvilIcons from "@expo/vector-icons/EvilIcons";
-import { api } from "../../services/api";
-
+// app/doctor/[id].jsx
+import { api } from "../../config/api"; 
 // ---------- Constantes & helpers ----------
 
 // Mapping nom du jour (texte) -> index JS (0 = dimanche, 1 = lundi, ...)

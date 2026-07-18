@@ -1,0 +1,10 @@
+app/medecinPages/dossierPatient.jsx
+app/medecinPages/appointment.tsx
+app/(tabs)/mesRDV.tsx
+app/(tabs)/profile.tsx
+app/medecinPages/profile.jsx
+app/medecinPages/horaire.jsx
+app/medecinPages/dashboardDoc1.jsx
+app/patientPages/dossier.jsx
+app/screens/LginScreen.js
+app/LoginScreen.tsx

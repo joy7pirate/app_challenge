@@ -7,12 +7,9 @@ import {
   Modal, Platform, KeyboardAvoidingView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { router } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-
-const API_URL = "http://192.168.100.81:8000/api";
+import API_ENDPOINTS, { api } from '../../config/api';
 
 const STATUT_STYLE = {
   en_attente: { bg: '#FFF3E0', text: '#FF9800', label: 'EN ATTENTE' },
@@ -83,10 +80,8 @@ export default function AppointmentsScreen() {
   // ── Fetch RDVs ─────────────────────────────────────────────────────────────
   const fetchRdvs = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      const res = await axios.get(`${API_URL}/rendezvous/medecin/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // ✅ L'intercepteur ajoute automatiquement le token
+      const res = await api.get(API_ENDPOINTS.RENDEZVOUS.MEDECIN_LIST);
       const data = res.data;
       setRdvs(data);
 
@@ -97,6 +92,7 @@ export default function AppointmentsScreen() {
       });
       setCounts(c);
     } catch (e) {
+      console.log('ERREUR fetchRdvs:', e?.response?.data || e.message);
       Alert.alert('Erreur', 'Impossible de charger les rendez-vous');
     } finally {
       setLoading(false);
@@ -147,14 +143,10 @@ export default function AppointmentsScreen() {
   // ── Update Statut ──────────────────────────────────────────────────────────
   const updateStatut = async (id, statut) => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      await axios.patch(
-        `${API_URL}/rendezvous/${id}/statut/`,
-        { statut },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.patch(API_ENDPOINTS.RENDEZVOUS.CHANGE_STATUS(id), { statut });
       await fetchRdvs();
     } catch (e) {
+      console.log('ERREUR updateStatut:', e?.response?.data || e.message);
       Alert.alert('Erreur', 'Action impossible');
     }
   };
@@ -191,163 +183,133 @@ export default function AppointmentsScreen() {
 
     setSubmitting(true);
     try {
-      const token = await AsyncStorage.getItem('access_token');
-
       const jourStr  = nouveauJour.toISOString().split('T')[0];
       const heureStr = nouvelleHeure.toTimeString().slice(0, 5);
 
-      await axios.patch(
-        `${API_URL}/rendezvous/${rdvToReport.id}/statut/`,
-        {
-          statut: 'reporte',
-          nouveau_jour: jourStr,
-          nouvelle_heure: heureStr,
-          commentaire_medecin: commentaire,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.patch(API_ENDPOINTS.RENDEZVOUS.CHANGE_STATUS(rdvToReport.id), {
+        statut: 'reporte',
+        nouveau_jour: jourStr,
+        nouvelle_heure: heureStr,
+        commentaire_medecin: commentaire,
+      });
 
       Alert.alert('Succès', 'Le rendez-vous a été reporté. Le patient doit confirmer.');
       closeReportModal();
       await fetchRdvs();
     } catch (e) {
+      console.log('ERREUR submitReport:', e?.response?.data || e.message);
       Alert.alert('Erreur', "Impossible de reporter ce rendez-vous.");
     } finally {
       setSubmitting(false);
     }
   };
 
+
+
   // ── Render Card ────────────────────────────────────────────────────────────
-  const renderCard = ({ item }) => {
-    const normalizedStatut = normalizeStatut(item.statut);
-    const s     = STATUT_STYLE[item.statut] || STATUT_STYLE[normalizedStatut] || STATUT_STYLE.en_attente;
-    const nom   = `${item.patient_detail?.first_name || ''} ${item.patient_detail?.last_name || ''}`.trim() || 'Patient';
-    const date  = new Date(item.jour).toLocaleDateString('fr-FR', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    });
-    const heure = item.heure?.slice(0, 5);
-    const canFinish = isRdvReadyToFinish(item, now);
-    const initiale = (() => {
-      const first = item.patient_detail?.first_name?.trim();
-      const last  = item.patient_detail?.last_name?.trim();
-      if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
-      if (first) return first[0].toUpperCase();
-      if (last)  return last[0].toUpperCase();
-      return 'P';
-    })();
+const renderCard = ({ item }) => {
+  const normalizedStatut = normalizeStatut(item.statut);
+  const s = STATUT_STYLE[item.statut] || STATUT_STYLE[normalizedStatut] || STATUT_STYLE.en_attente;
+  const nom = `${item.patient_detail?.first_name || ''} ${item.patient_detail?.last_name || ''}`.trim() || 'Patient';
+  const date = new Date(item.jour).toLocaleDateString('fr-FR', {
+    day: '2-digit', month: 'short', year: 'numeric'
+  });
+  const heure = item.heure?.slice(0, 5);
+  const canFinish = isRdvReadyToFinish(item, now);
 
-    return (
-      <View style={styles.card}>
+  // DEBUG - à retirer après test
+  console.log('DEBUG', item.id, 'statut_brut:', item.statut, 'normalise:', normalizedStatut, 'canFinish:', canFinish);
 
-        {/* ── Header ── */}
-        <View style={styles.cardHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initiale}</Text>
+  const initiale = (() => {
+    const first = item.patient_detail?.first_name?.trim();
+    const last  = item.patient_detail?.last_name?.trim();
+    if (first && last) return `${first[0]}${last[0]}`.toUpperCase();
+    if (first) return first[0].toUpperCase();
+    if (last)  return last[0].toUpperCase();
+    return 'P';
+  })();
+
+  return (
+    <View style={styles.card}>
+      {/* Header inchangé */}
+      <View style={styles.cardHeader}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initiale}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.patientName}>{nom}</Text>
+          <View style={styles.dateRow}>
+            <Ionicons name="calendar-outline" size={13} color="#888" />
+            <Text style={styles.dateText}> {date}</Text>
+            <Ionicons name="time-outline" size={13} color="#888" style={{ marginLeft: 8 }} />
+            <Text style={styles.dateText}> {heure}</Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.patientName}>{nom}</Text>
-            <View style={styles.dateRow}>
-              <Ionicons name="calendar-outline" size={13} color="#888" />
-              <Text style={styles.dateText}> {date}</Text>
-              <Ionicons name="time-outline" size={13} color="#888" style={{ marginLeft: 8 }} />
-              <Text style={styles.dateText}> {heure}</Text>
-            </View>
-            <Text style={styles.motif} numberOfLines={1}>📋 {item.motif}</Text>
-            <View style={[styles.badge, { backgroundColor: s.bg }]}>
-              <Text style={[styles.badgeText, { color: s.text }]}>{s.label}</Text>
-            </View>
+          <Text style={styles.motif} numberOfLines={1}>📋 {item.motif}</Text>
+          <View style={[styles.badge, { backgroundColor: s.bg }]}>
+            <Text style={[styles.badgeText, { color: s.text }]}>{s.label}</Text>
           </View>
         </View>
+      </View>
 
-        {/* ── Boutons EN ATTENTE ── */}
-        {item.statut === 'en_attente' && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: '#5CE9FE', flex: 1 }]}
-              onPress={() => confirmerAction(item.id, 'accepte', nom)}
-            >
-              <Ionicons name="checkmark-circle" size={16} color="#006773" />
-              <Text style={[styles.btnText, { color: '#006773' }]}>Accepter</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: '#FFDAD6', flex: 1 }]}
-              onPress={() => confirmerAction(item.id, 'refuse', nom)}
-            >
-              <Ionicons name="close-circle" size={16} color="#93000A" />
-              <Text style={[styles.btnText, { color: '#93000A' }]}>Refuser</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: '#F5F5F5', flex: 1 }]}
-              onPress={() => openReportModal(item)}
-            >
-              <Ionicons name="calendar" size={16} color="#555" />
-              <Text style={[styles.btnText, { color: '#555' }]}>Reporter</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ── Boutons ACCEPTÉ ── */}
-        {item.statut === 'accepte' && (
-          <View style={styles.actions}>
-            {canFinish ? (
-              <TouchableOpacity
-                style={[styles.btn, { backgroundColor: '#2196F3', flex: 1 }]}
-                onPress={() => confirmerAction(item.id, 'termine', nom)}
-              >
-                <Ionicons name="checkmark-done-circle" size={16} color="#fff" />
-                <Text style={styles.btnText}>Marquer Terminé</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={[styles.btn, { backgroundColor: '#E3F2FD', flex: 1 }]}>
-                <Ionicons name="hourglass-outline" size={16} color="#2196F3" />
-                <Text style={[styles.btnText, { color: '#2196F3' }]}>
-                  RDV le {date}
-                </Text>
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: '#F5F5F5' }]}
-              onPress={() => openReportModal(item)}
-            >
-              <Ionicons name="calendar" size={16} color="#555" />
-              <Text style={[styles.btnText, { color: '#555' }]}>Reporter</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.btnIcon}
-              onPress={() =>
-                Alert.alert(
-                  nom,
-                  `📋 Motif : ${item.motif}\n📅 Date : ${date}\n⏰ Heure : ${heure}`
-                )
-              }
-            >
-              <Ionicons name="ellipsis-vertical" size={20} color="#555" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ── REPORTÉ ── */}
-        {item.statut === 'reporte' && (
-          <View style={styles.reportInfo}>
-            <Ionicons name="information-circle" size={16} color="#2196F3" />
-            <Text style={styles.reportInfoText}>
-              En attente de confirmation du patient pour le{' '}
-              {item.nouveau_jour
-                ? new Date(item.nouveau_jour).toLocaleDateString('fr-FR')
-                : ''}{' '}
-              à {item.nouvelle_heure?.slice(0, 5)}
-            </Text>
-          </View>
-        )}
-
-        {/* ── REFUSÉ / TERMINÉ ── */}
-        {(item.statut === 'refuse' || item.statut === 'termine') && (
+      {/* ── Boutons EN ATTENTE ── */}
+      {normalizedStatut === 'en_attente' && (
+        <View style={styles.actions}>
           <TouchableOpacity
-            style={[styles.btn, { backgroundColor: '#F5F5F5', marginTop: 12 }]}
+            style={[styles.btn, { backgroundColor: '#5CE9FE', flex: 1 }]}
+            onPress={() => confirmerAction(item.id, 'accepte', nom)}
+          >
+            <Ionicons name="checkmark-circle" size={16} color="#006773" />
+            <Text style={[styles.btnText, { color: '#006773' }]}>Accepter</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.btn, { backgroundColor: '#FFDAD6', flex: 1 }]}
+            onPress={() => confirmerAction(item.id, 'refuse', nom)}
+          >
+            <Ionicons name="close-circle" size={16} color="#93000A" />
+            <Text style={[styles.btnText, { color: '#93000A' }]}>Refuser</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.btn, { backgroundColor: '#F5F5F5', flex: 1 }]}
+            onPress={() => openReportModal(item)}
+          >
+            <Ionicons name="calendar" size={16} color="#555" />
+            <Text style={[styles.btnText, { color: '#555' }]}>Reporter</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── Boutons ACCEPTÉ ── */}
+      {normalizedStatut === 'accepte' && (
+        <View style={styles.actions}>
+          {canFinish ? (
+            <TouchableOpacity
+              style={[styles.btn, { backgroundColor: '#2196F3', flex: 1 }]}
+              onPress={() => confirmerAction(item.id, 'termine', nom)}
+            >
+              <Ionicons name="checkmark-done-circle" size={16} color="#fff" />
+              <Text style={styles.btnText}>Marquer Terminé</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.btn, { backgroundColor: '#E3F2FD', flex: 1 }]}>
+              <Ionicons name="hourglass-outline" size={16} color="#2196F3" />
+              <Text style={[styles.btnText, { color: '#2196F3' }]}>
+                RDV le {date}
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.btn, { backgroundColor: '#F5F5F5' }]}
+            onPress={() => openReportModal(item)}
+          >
+            <Ionicons name="calendar" size={16} color="#555" />
+            <Text style={[styles.btnText, { color: '#555' }]}>Reporter</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.btnIcon}
             onPress={() =>
               Alert.alert(
                 nom,
@@ -355,30 +317,59 @@ export default function AppointmentsScreen() {
               )
             }
           >
-            <Ionicons name="eye-outline" size={16} color="#555" />
-            <Text style={[styles.btnText, { color: '#555' }]}>Voir détails</Text>
+            <Ionicons name="ellipsis-vertical" size={20} color="#555" />
           </TouchableOpacity>
-        )}
+        </View>
+      )}
 
-        {/* ── Bouton Dossier Médical ── */}
+      {/* ── REPORTÉ ── */}
+      {normalizedStatut === 'reporte' && (
+        <View style={styles.reportInfo}>
+          <Ionicons name="information-circle" size={16} color="#2196F3" />
+          <Text style={styles.reportInfoText}>
+            En attente de confirmation du patient pour le{' '}
+            {item.nouveau_jour
+              ? new Date(item.nouveau_jour).toLocaleDateString('fr-FR')
+              : ''}{' '}
+            à {item.nouvelle_heure?.slice(0, 5)}
+          </Text>
+        </View>
+      )}
+
+      {/* ── REFUSÉ / TERMINÉ ── */}
+      {(normalizedStatut === 'refuse' || normalizedStatut === 'termine') && (
         <TouchableOpacity
-          style={styles.dossierBtn}
-          onPress={() => {
-            const patientId = item.patient_detail?.id ?? item.patient?.id ?? item.patient_id ?? item.id;
-            router.push({
-              pathname: '/medecinPages/dossierPatient',
-              params: { patientId, rdvId: item.id },
-            });
-          }}
+          style={[styles.btn, { backgroundColor: '#F5F5F5', marginTop: 12 }]}
+          onPress={() =>
+            Alert.alert(
+              nom,
+              `📋 Motif : ${item.motif}\n📅 Date : ${date}\n⏰ Heure : ${heure}`
+            )
+          }
         >
-          <Ionicons name="folder-open-outline" size={16} color="#2563eb" />
-          <Text style={styles.dossierBtnText}>Dossier médical</Text>
+          <Ionicons name="eye-outline" size={16} color="#555" />
+          <Text style={[styles.btnText, { color: '#555' }]}>Voir détails</Text>
         </TouchableOpacity>
+      )}
 
-      </View>
-    );
-  };
+      {/* ── Bouton Dossier Médical ── */}
+      <TouchableOpacity
+        style={styles.dossierBtn}
+        onPress={() => {
+          const patientId = item.patient_detail?.id ?? item.patient?.id ?? item.patient_id ?? item.id;
+          router.push({
+            pathname: '/medecinPages/dossierPatient',
+            params: { patientId, rdvId: item.id },
+          });
+        }}
+      >
+        <Ionicons name="folder-open-outline" size={16} color="#2563eb" />
+        <Text style={styles.dossierBtnText}>Dossier médical</Text>
+      </TouchableOpacity>
 
+    </View>
+  );
+};
   // ── Stats Cards ────────────────────────────────────────────────────────────
   const StatsCard = ({ label, count, icon, color, statut }) => (
     <TouchableOpacity

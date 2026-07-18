@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, FlatList, ActivityIndicator } from "react-native";
-import { api } from "../../services/api";
+// import { api } from "../../services/api";
+import { api } from '../../config/api'; 
 import FilterChips from "../../components/FilterChips";
 import DoctorCard from "../../components/DoctorCard";
 

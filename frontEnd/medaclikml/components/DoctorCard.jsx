@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import EvilIcons from '@expo/vector-icons/EvilIcons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from "react";
-import { api } from '../services/api';
+import { api } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const getNextDateFromDayName = (jour) => {

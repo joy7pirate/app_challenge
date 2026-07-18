@@ -7,10 +7,7 @@ import {
   RefreshControl, ScrollView, Platform, KeyboardAvoidingView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-
-const API_URL = "http://192.168.100.81:8000/api";
+import API_ENDPOINTS, { api } from '../../config/api';
 
 const JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
@@ -64,13 +61,10 @@ export default function HoraireScreen() {
   useEffect(() => {
     const getMedecinId = async () => {
       try {
-        const token = await AsyncStorage.getItem('access_token');
-        const res = await axios.get(`${API_URL}/auth/me/`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get(API_ENDPOINTS.AUTH.ME);
         setMedecinId(res.data.medecin_id);
       } catch (e) {
-        console.log('medecin id error', e);
+        console.log('medecin id error', e?.response?.data || e.message);
       }
     };
     getMedecinId();
@@ -79,9 +73,7 @@ export default function HoraireScreen() {
   // ── Fetch ───────────────────────────────────────────────────────────────────
   const fetchDispos = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      const res = await axios.get(`${API_URL}/disponibilites/`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await api.get(API_ENDPOINTS.DISPONIBILITES.LIST, {
         params: { medecin: medecinId }
       });
       const sorted = [...res.data].sort(
@@ -89,6 +81,7 @@ export default function HoraireScreen() {
       );
       setDispos(sorted);
     } catch (e) {
+      console.log('ERREUR fetchDispos:', e?.response?.data || e.message);
       Alert.alert('Erreur', 'Impossible de charger les disponibilités');
     } finally {
       setLoading(false);
@@ -135,7 +128,6 @@ export default function HoraireScreen() {
 
     setSaving(true);
     try {
-      const token = await AsyncStorage.getItem('access_token');
       const payload = {
         jour:        form.jour,
         heure_debut: form.heure_debut,
@@ -144,22 +136,15 @@ export default function HoraireScreen() {
       };
 
       if (editItem) {
-        await axios.put(
-          `${API_URL}/disponibilites/${editItem.id}/`,
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await api.put(API_ENDPOINTS.DISPONIBILITES.UPDATE(editItem.id), payload);
       } else {
-        await axios.post(
-          `${API_URL}/disponibilites/`,
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await api.post(API_ENDPOINTS.DISPONIBILITES.CREATE, payload);
       }
 
       setModalVisible(false);
       fetchDispos();
     } catch (e) {
+      console.log('ERREUR handleSave:', e?.response?.data || e.message);
       Alert.alert('Erreur', 'Impossible de sauvegarder');
     } finally {
       setSaving(false);
@@ -177,12 +162,10 @@ export default function HoraireScreen() {
           text: 'Supprimer', style: 'destructive',
           onPress: async () => {
             try {
-              const token = await AsyncStorage.getItem('access_token');
-              await axios.delete(`${API_URL}/disponibilites/${item.id}/`, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
+              await api.delete(API_ENDPOINTS.DISPONIBILITES.DELETE(item.id));
               fetchDispos();
             } catch (e) {
+              console.log('ERREUR handleDelete:', e?.response?.data || e.message);
               Alert.alert('Erreur', 'Impossible de supprimer');
             }
           }
@@ -475,7 +458,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 12, fontWeight: '700', color: '#aaa', letterSpacing: 1 },
   editAll:      { fontSize: 14, color: '#2196F3', fontWeight: '600' },
 
-  // Card
   card:        { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 12, borderRadius: 16, padding: 16, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   dateBox:     { width: 52, height: 60, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
   dateMonth:   { fontSize: 11, fontWeight: '700', letterSpacing: 1 },
@@ -487,18 +469,15 @@ const styles = StyleSheet.create({
   cardActions: { flexDirection: 'row', gap: 8 },
   iconBtn:     { backgroundColor: '#F5F5F5', padding: 8, borderRadius: 10 },
 
-  // Coverage card
   coverageCard:  { margin: 16, borderRadius: 16, borderWidth: 1.5, borderColor: '#D0D0D0', borderStyle: 'dashed', backgroundColor: '#fff', padding: 24, alignItems: 'center' },
   coverageTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginTop: 12 },
   coverageSub:   { fontSize: 13, color: '#888', textAlign: 'center', marginTop: 6, marginBottom: 16 },
   addAvailBtn:   { backgroundColor: '#1565C0', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 30 },
   addAvailText:  { color: '#fff', fontWeight: '700', fontSize: 15 },
 
-  // Empty
   emptyBox:  { alignItems: 'center', paddingTop: 48 },
   emptyText: { color: '#bbb', marginTop: 12, fontSize: 16 },
 
-  // Planning
   planningRow:      { flexDirection: 'row', marginHorizontal: 16, marginBottom: 10, alignItems: 'flex-start' },
   planningJour:     { width: 52, height: 52, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   planningJourText: { fontSize: 12, fontWeight: '800', letterSpacing: 1 },
@@ -507,7 +486,6 @@ const styles = StyleSheet.create({
   slotBadge:        { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
   slotText:         { fontSize: 12, fontWeight: '600' },
 
-  // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalBox:     { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
   modalHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
@@ -521,6 +499,5 @@ const styles = StyleSheet.create({
   saveBtn:      { backgroundColor: '#1565C0', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   saveBtnText:  { color: '#fff', fontSize: 16, fontWeight: '700' },
 
-  // FAB
   fab: { position: 'absolute', bottom: 30, right: 24, backgroundColor: '#1565C0', width: 58, height: 58, borderRadius: 29, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, elevation: 6 },
 });

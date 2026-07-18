@@ -6,16 +6,15 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { router } from 'expo-router';
-
-const API_URL = 'http://192.168.100.81:8000/api';
+import API_ENDPOINTS, { api } from '../../config/api';
 
 export default function DashboardDoc() {
   const [medecin, setMedecin]       = useState(null);
   const [rendezvous, setRendezvous] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError]           = useState('');
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -24,102 +23,50 @@ export default function DashboardDoc() {
     return 'Bonsoir';
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // EXPLICATION useEffect + isMounted :
-  //
-  // useEffect(fn, [])  →  [] vide = s'exécute UNE SEULE FOIS
-  //                        au montage du composant, jamais après.
-  //
-  // Le problème d'avant :
-  //   useCallback crée une fonction "mémorisée".
-  //   Mais si les dépendances changent, elle se recrée.
-  //   Chaque setState() → re-render → fetchDashboard recrée
-  //   → useEffect le détecte → rappelle fetch → boucle infinie.
-  //
-  // La solution :
-  //   On met toute la logique DANS le useEffect directement.
-  //   Avec [] en dépendances = jamais re-déclenché.
-  //
-  // isMounted :
-  //   Si l'utilisateur quitte l'écran PENDANT le chargement,
-  //   le composant est "démonté". Si on appelle setState sur
-  //   un composant démonté → erreur React.
-  //   isMounted = false dans le cleanup empêche ça.
-  // ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    let isMounted = true; // ← garde en mémoire si le composant est encore actif
-
-    const init = async () => {
-      try {
-        // 1. Vérifier le rôle
-        const role = await AsyncStorage.getItem('role');
-        if (role !== 'medecin') {
-          router.replace('/');
-          return;
-        }
-
-        // 2. Vérifier le token
-        const token = await AsyncStorage.getItem('access_token');
-        if (!token) {
-          router.replace('/');
-          return;
-        }
-
-        // 3. Appel API
-        const res = await axios.get(`${API_URL}/medecin/dashboard/`, {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 5000,
-        });
-
-        // 4. Mettre à jour le state SEULEMENT si encore monté
-        if (isMounted) {
-          setMedecin(res.data.medecin);
-          setRendezvous(res.data.rendezvous || []);
-        }
-      } catch (e) {
-        console.log('ERREUR init:', e.message);
-        if (isMounted) {
-          setMedecin(null);
-          setRendezvous([]);
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    init(); // lancer
-
-    // Cleanup : quand le composant se démonte
-    return () => { isMounted = false; };
-  }, []); // ← [] = une seule fois, jamais de boucle
-
-
-  // ─────────────────────────────────────────────────────────────
-  // fetchDashboard = UNIQUEMENT pour le pull-to-refresh manuel
-  // C'est une fonction simple, pas un useCallback,
-  // donc elle ne peut pas causer de boucle.
-  // ─────────────────────────────────────────────────────────────
-  const fetchDashboard = async () => {
+  const fetchDashboard = async (showLoader = false) => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
-      if (!token) return;
+      if (showLoader) setLoading(true);
 
-      const res = await axios.get(`${API_URL}/medecin/dashboard/`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 5000,
+      const role = await AsyncStorage.getItem('role');
+      if (role !== 'medecin') {
+        router.replace('/');
+        return;
+      }
+
+      const res = await api.get(API_ENDPOINTS.MEDECINS.DASHBOARD, {
+        timeout: 15000,
       });
+
       setMedecin(res.data.medecin);
       setRendezvous(res.data.rendezvous || []);
+      setError('');
     } catch (e) {
-      console.log('ERREUR refresh:', e.message);
+      console.log('ERREUR dashboard:', e?.response?.data || e.message);
+
+      if (e.response?.status === 401) {
+        await AsyncStorage.multiRemove(['authToken', 'refreshToken', 'role']);
+        router.replace('/');
+        return;
+      }
+
+      setError(
+        e.code === 'ECONNABORTED'
+          ? 'Le serveur met trop de temps à répondre.'
+          : 'Impossible de charger le dashboard.'
+      );
     } finally {
+      setLoading(false);
       setRefreshing(false);
     }
   };
 
+  useEffect(() => {
+    fetchDashboard(true);
+  }, []);
+
   const onRefresh = () => {
     setRefreshing(true);
-    fetchDashboard(); // appelé manuellement par l'utilisateur
+    fetchDashboard(false);
   };
 
   // ── Stats ────────────────────────────────────────────
@@ -153,6 +100,21 @@ export default function DashboardDoc() {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Chargement...</Text>
+      </View>
+    );
+  }
+
+  if (error && !medecin) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="cloud-offline-outline" size={48} color="#EF4444" />
+        <Text style={[styles.loadingText, { color: '#EF4444', marginTop: 12 }]}>{error}</Text>
+        <TouchableOpacity
+          style={{ marginTop: 20, backgroundColor: '#2563EB', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 25 }}
+          onPress={() => fetchDashboard(true)}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700' }}>Réessayer</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -423,10 +385,10 @@ function ProgressBar({ label, value, unit, color }) {
   );
 }
 
-// ── Styles ───────────────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: '#F9FAFB' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   loadingText:      { color: '#2563EB', fontSize: 16 },
   scroll:           { paddingHorizontal: 16, paddingTop: 8 },
 

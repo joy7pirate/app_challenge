@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from django.utils import timezone  # ← AJOUT pour date_cloture
 from rest_framework import generics, viewsets, status
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny, BasePermission
@@ -10,6 +11,7 @@ from django.contrib.auth import authenticate, get_user_model
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.parsers import MultiPartParser, FormParser
+from django.db import transaction, IntegrityError
 
 from .models import (
     CentreSante,
@@ -29,6 +31,7 @@ from .serializers import (
     PatientSerializer,
     RendezVousSerializer,
     RendezVousPatientSerializer,
+    RendezVousMedecinSerializer,
     RegisterSerializer,
     DossierMedicalSerializer,
     ConsultationSerializer,
@@ -112,6 +115,12 @@ class PatientViewSet(viewsets.ViewSet):
         serializer = PatientSerializer(patient)
         return Response(serializer.data)
 
+    def retrieve(self, request, pk=None):
+        # Sécurité : un patient ne peut voir que SON propre dossier
+        patient = get_object_or_404(Patient, pk=pk, user=request.user)
+        serializer = PatientSerializer(patient)
+        return Response(serializer.data)
+
     def partial_update(self, request, pk=None):
         patient = get_object_or_404(Patient, pk=pk, user=request.user)
         serializer = PatientSerializer(patient, data=request.data, partial=True)
@@ -128,12 +137,51 @@ class RendezVousListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         return RendezVous.objects.filter(patient=self.request.user.patient)
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
+        # Récupérer les données pour vérifier la disponibilité
+        medecin_id = request.data.get('medecin')
+        jour = request.data.get('jour')
+        heure = request.data.get('heure')
+
+        # Valider que les champs obligatoires sont présents
+        if not medecin_id or not jour or not heure:
+            return Response(
+                {'error': 'Les champs médecin, jour et heure sont obligatoires'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
-            patient = self.request.user.patient
-            serializer.save(patient=patient)
-        except Exception as e:
-            raise serializers.ValidationError(f"Erreur patient : {e}")
+            with transaction.atomic():
+                # Vérifier si le créneau est déjà pris
+                rdv_existant = RendezVous.objects.filter(
+                    medecin=medecin_id,
+                    jour=jour,
+                    heure=heure,
+                    statut__in=['en_attente', 'confirme']
+                ).select_for_update().exists()
+
+                if rdv_existant:
+                    return Response(
+                        {'error': 'Ce créneau horaire est déjà réservé pour ce médecin'},
+                        status=status.HTTP_409_CONFLICT
+                    )
+                
+                # Sauvegarder le rendez-vous
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                self.perform_create(serializer)
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        except IntegrityError:
+            return Response(
+                {'error': 'Erreur de disponibilité - veuillez réessayer'},
+                status=status.HTTP_409_CONFLICT
+            )
+
+    def perform_create(self, serializer):
+        patient = self.request.user.patient
+        serializer.save(patient=patient)
 
 
 class RendezVousDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -279,8 +327,18 @@ def changer_statut_rdv(request, rdv_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def rdv_medecin(request):
+    """
+    Liste des rendez-vous du médecin connecté.
+    On utilise RendezVousMedecinSerializer qui ajoute pour chaque RDV :
+      - consultation_id   : id de la consultation liée (ou null)
+      - consultation_status : statut de la consultation ("en_cours", "terminee" ou null)
+    Cela permet au frontend d'afficher le bouton "Terminer" ou le badge "Terminée".
+    """
+    if not hasattr(request.user, 'medecin'):
+        return Response({'error': 'Accès refusé'}, status=status.HTTP_403_FORBIDDEN)
+
     rdvs = RendezVous.objects.filter(medecin=request.user.medecin)
-    serializer = RendezVousSerializer(rdvs, many=True)
+    serializer = RendezVousMedecinSerializer(rdvs, many=True)
     return Response(serializer.data)
 
 
@@ -308,6 +366,23 @@ class MedecinPatientDossierView(APIView):
         patient = get_object_or_404(Patient, id=patient_id)
         if not _has_confirmed_or_finished_rdv(request.user.medecin, patient):
             return None, Response({'error': 'Accès refusé : aucun rendez-vous confirmé ou terminé ne relie ce médecin à ce patient.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # --- Nouvelle vérification : accès refusé si toutes les consultations
+        # entre ce médecin et ce patient sont terminées (clôturées).
+        # On n'autorise l'accès que s'il existe AU MOINS UNE consultation
+        # active (statut_consultation != "terminee") avec ce patient.
+        consultations = Consultation.objects.filter(
+            medecin=request.user.medecin,
+            dossier_medical__patient=patient,
+        )
+        if consultations.exists():
+            consultation_active = consultations.exclude(statut_consultation='terminee').exists()
+            if not consultation_active:
+                return None, Response(
+                    {'error': 'Accès refusé : cette consultation est terminée.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        # -----------------------------------------------------------------
 
         dossier = get_object_or_404(DossierMedical, patient=patient)
         return dossier, None
@@ -403,6 +478,52 @@ class ConsultationDetailView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TerminerConsultationView(APIView):
+    """
+    Endpoint PATCH /api/consultations/<consultation_id>/terminer/
+    Permet au médecin propriétaire de clôturer une consultation :
+      - passe statut_consultation à "terminee"
+      - enregistre date_cloture avec la date/heure actuelle
+    Renvoie la consultation mise à jour en JSON.
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, consultation_id):
+        # 1) Vérifier que l'utilisateur connecté est bien un médecin
+        if not hasattr(request.user, 'medecin'):
+            return Response(
+                {'error': 'Accès refusé : seuls les médecins peuvent terminer une consultation.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 2) Récupérer la consultation (404 si elle n'existe pas)
+        consultation = get_object_or_404(Consultation, id=consultation_id)
+
+        # 3) Vérifier que la consultation appartient bien au médecin connecté
+        if consultation.medecin.user != request.user:
+            return Response(
+                {'error': 'Accès refusé : vous n\'êtes pas le médecin de cette consultation.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 4) Vérifier que la consultation n'est pas déjà terminée
+        if consultation.statut_consultation == 'terminee':
+            return Response(
+                {'error': 'Cette consultation est déjà terminée.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 5) Mettre à jour le statut et la date de clôture
+        consultation.statut_consultation = 'terminee'
+        consultation.date_cloture = timezone.now()
+        consultation.save(update_fields=['statut_consultation', 'date_cloture'])
+
+        # 6) Retourner la consultation mise à jour
+        serializer = ConsultationSerializer(consultation)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class OrdonnanceCreateView(APIView):

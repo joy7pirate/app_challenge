@@ -21,6 +21,7 @@ from .views import (
     MedecinPatientDossierView,
     ConsultationCreateView,
     ConsultationDetailView,
+    TerminerConsultationView,
     OrdonnanceCreateView,
     OrdonnanceDetailView,
     ExamenCreateView,
@@ -55,6 +56,8 @@ urlpatterns = [
     path('medecin/patient/<int:patient_id>/dossier/', MedecinPatientDossierView.as_view(), name='medecin-patient-dossier'),
     path('consultations/create/', ConsultationCreateView.as_view(), name='consultation-create'),
     path('consultations/<int:consultation_id>/', ConsultationDetailView.as_view(), name='consultation-detail'),
+    # Nouvelle route : terminer (clôturer) une consultation
+    path('consultations/<int:consultation_id>/terminer/', TerminerConsultationView.as_view(), name='consultation-terminer'),
     path('ordonnances/create/', OrdonnanceCreateView.as_view(), name='ordonnance-create'),
     path('ordonnances/<int:ordonnance_id>/', OrdonnanceDetailView.as_view(), name='ordonnance-detail'),
     path('examens/create/', ExamenCreateView.as_view(), name='examen-create'),
@@ -69,6 +72,7 @@ urlpatterns = [
         'get': 'list',
     }), name='patients-list'),
     path('patients/<int:pk>/', PatientViewSet.as_view({
+        'get': 'retrieve',
         'patch': 'partial_update',
         'put': 'partial_update',
     }), name='patients-detail'),

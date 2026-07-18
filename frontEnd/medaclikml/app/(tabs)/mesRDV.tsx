@@ -13,10 +13,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-
-const API_URL = 'http://192.168.100.81:8000/api';
+import API_ENDPOINTS, { api } from '../../config/api';
 
 const STATUT_CONFIG = {
   en_attente: { label: 'En attente', color: '#F59E0B', bg: '#FEF3C7' },
@@ -42,14 +40,12 @@ export default function MesRendezVous() {
   const [selectedRdv, setSelectedRdv] = useState(null);
   const [processingReponse, setProcessingReponse] = useState(false);
 
-  const getToken = async () => {
-    return await AsyncStorage.getItem('access_token');
-  };
+  const getToken = async () => await AsyncStorage.getItem('access_token');
 
   const fetchRdvs = useCallback(async () => {
     try {
       const token = await getToken();
-      const res = await axios.get(`${API_URL}/rendezvous/patient/`, {
+      const res = await api.get(API_ENDPOINTS.RENDEZVOUS.PATIENT_LIST, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setRdvs(res.data);
@@ -97,8 +93,8 @@ export default function MesRendezVous() {
     setProcessingReponse(true);
     try {
       const token = await getToken();
-      await axios.patch(
-        `${API_URL}/rendezvous/${selectedRdv.id}/repondre/`,
+      await api.patch(
+        `${API_ENDPOINTS.RENDEZVOUS}${selectedRdv.id}/repondre/`,
         { reponse },
         { headers: { Authorization: `Bearer ${token}` } }
       );

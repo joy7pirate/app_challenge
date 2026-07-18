@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api } from "../../services/api";
+import { api } from "../../config/api";
 
 const formatHeure24 = (heure) => {
   if (!heure) return "";
@@ -31,13 +31,7 @@ const capitalize = (text) => {
 const getNextDateFromDayName = (jour) => {
   if (!jour) return null;
   const mapping = {
-    dimanche: 0,
-    lundi: 1,
-    mardi: 2,
-    mercredi: 3,
-    jeudi: 4,
-    vendredi: 5,
-    samedi: 6,
+    dimanche: 0, lundi: 1, mardi: 2, mercredi: 3, jeudi: 4, vendredi: 5, samedi: 6,
   };
   const normalized = jour.toLowerCase();
   const target = mapping[normalized];
@@ -68,18 +62,6 @@ const getInitials = (medecin) => {
   return `${first}${last}`.toUpperCase();
 };
 
-const formatDateFR = (dateStr) => {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  });
-};
-
 export default function BookingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -94,11 +76,71 @@ export default function BookingScreen() {
   const [motif, setMotif] = useState("");
   const [focusedField, setFocusedField] = useState(null);
 
+  const [patientId, setPatientId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // 🔵 Charger le profil patient dès l'ouverture de l'écran
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('access_token');
+        if (!token) {
+          Alert.alert('Erreur', 'Vous devez être connecté pour prendre un rendez-vous.');
+          router.back();
+          return;
+        }
+
+        const profileRes = await api.get('/auth/me/', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const profile = profileRes.data || {};
+        console.log('📦 Profil auth (booking):', profile);
+
+        const idRaw =
+          profile.patient?.id ||
+          profile.patient_id ||
+          profile.id;
+        const id = idRaw ? Number(idRaw) : null;
+
+        if (!id || Number.isNaN(id)) {
+          throw new Error('Identifiant patient introuvable');
+        }
+        setPatientId(id);
+
+        // Pré-remplissage nom / prénom / téléphone
+        setPrenom(profile.first_name || "");
+        setNom(profile.last_name || profile.username?.split('@')[0] || "");
+        setTelephone(profile.telephone || "");
+
+        // Si le téléphone n'est pas dans /auth/me/, on va le chercher via /patients/
+        if (!profile.telephone) {
+          try {
+            const patientRes = await api.get('/patients/', {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const patientData = patientRes.data;
+            if (patientData?.telephone) setTelephone(patientData.telephone);
+            if (patientData?.nom) setNom(patientData.nom);
+            if (patientData?.prenom) setPrenom(patientData.prenom);
+          } catch (err) {
+            console.log('⚠️ Impossible de récupérer /patients/ :', err.message);
+          }
+        }
+      } catch (error) {
+        console.log('Erreur chargement profil :', error.response?.data || error.message);
+        Alert.alert('Erreur', "Impossible de charger votre profil.");
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   const handleConfirm = async () => {
-    if (!prenom.trim() || !nom.trim() || !telephone.trim() || !motif.trim()) {
-      Alert.alert("Veuillez remplir tous les champs");
+    if (!motif.trim()) {
+      Alert.alert("Veuillez préciser le motif de la consultation");
       return;
     }
 
@@ -107,41 +149,14 @@ export default function BookingScreen() {
       return;
     }
 
+    if (!patientId) {
+      Alert.alert("Erreur", "Impossible d'identifier votre compte patient.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const token = await AsyncStorage.getItem('access_token');
-      if (!token) {
-        Alert.alert('Erreur', 'Vous devez être connecté pour prendre un rendez-vous.');
-        setIsSubmitting(false);
-        return;
-      }
-
-      const profileRes = await api.get('/auth/me/', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const profile = profileRes.data || {};
-      console.log('Profil auth:', profile);
-
-      const patientIdRaw =
-        profile.patient?.id ||
-        profile.patient?.pk ||
-        profile.patient ||
-        profile.patient_id ||
-        profile.id ||
-        profile.pk ||
-        profile.user_id ||
-        profile.user?.id;
-
-      const patientId =
-        patientIdRaw === undefined || patientIdRaw === null
-          ? null
-          : Number(patientIdRaw);
-
-      if (!patientId || Number.isNaN(patientId)) {
-        throw new Error('Identifiant patient introuvable');
-      }
 
       const normalizedJour = /^\d{4}-\d{2}-\d{2}$/.test(jour)
         ? jour
@@ -154,7 +169,6 @@ export default function BookingScreen() {
         medecin: medecin.id,
         centre: centre.id,
         patient: patientId,
-        patient_id: patientId,
         patient_prenom: prenom,
         patient_nom: nom,
         telephone,
@@ -179,12 +193,7 @@ export default function BookingScreen() {
       Alert.alert(
         "✅ Rendez-vous confirmé !",
         `Votre RDV avec Dr. ${medecin?.nom || "..."} est confirmé\nle ${normalizedJour || "..."} à ${formatHeure24(payload.heure)}.`,
-        [
-          {
-            text: "Retour à l'accueil",
-            onPress: () => router.push("/"),
-          },
-        ]
+        [{ text: "Retour à l'accueil", onPress: () => router.push("/") }]
       );
     } catch (error) {
       console.log("Erreur création RDV :", error.response?.data || error.message);
@@ -192,7 +201,7 @@ export default function BookingScreen() {
         "Erreur",
         error.response?.data?.detail ||
           error.response?.data?.message ||
-          "Impossible de créer le rendez-vous. Vérifiez votre connexion ou réessayez plus tard."
+          "Impossible de créer le rendez-vous. Ce créneau est peut-être déjà réservé."
       );
     } finally {
       setIsSubmitting(false);
@@ -205,6 +214,15 @@ export default function BookingScreen() {
         <Text style={styles.errorText}>
           Impossible de charger les détails du rendez-vous.
         </Text>
+      </View>
+    );
+  }
+
+  if (isLoadingProfile) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#0066CC" />
+        <Text style={{ marginTop: 12, color: "#6B7280" }}>Chargement de votre profil...</Text>
       </View>
     );
   }
@@ -236,58 +254,35 @@ export default function BookingScreen() {
 
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Informations patient</Text>
+          <Text style={styles.helperText}>
+            Ces informations sont issues de votre profil.
+          </Text>
 
+          {/* 🔒 Champs verrouillés, pré-remplis */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Prénom</Text>
-            <TextInput
-              value={prenom}
-              onChangeText={setPrenom}
-              onFocus={() => setFocusedField("prenom")}
-              onBlur={() => setFocusedField(null)}
-              style={[
-                styles.input,
-                focusedField === "prenom" && styles.inputFocused,
-              ]}
-              placeholder="Prénom"
-              placeholderTextColor="#9CA3AF"
-            />
+            <View style={styles.readonlyField}>
+              <Text style={styles.readonlyText}>{prenom || "-"}</Text>
+            </View>
           </View>
 
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Nom</Text>
-            <TextInput
-              value={nom}
-              onChangeText={setNom}
-              onFocus={() => setFocusedField("nom")}
-              onBlur={() => setFocusedField(null)}
-              style={[
-                styles.input,
-                focusedField === "nom" && styles.inputFocused,
-              ]}
-              placeholder="Nom"
-              placeholderTextColor="#9CA3AF"
-            />
+            <View style={styles.readonlyField}>
+              <Text style={styles.readonlyText}>{nom || "-"}</Text>
+            </View>
           </View>
 
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Téléphone</Text>
-            <TextInput
-              value={telephone}
-              onChangeText={setTelephone}
-              onFocus={() => setFocusedField("telephone")}
-              onBlur={() => setFocusedField(null)}
-              style={[
-                styles.input,
-                focusedField === "telephone" && styles.inputFocused,
-              ]}
-              placeholder="Téléphone"
-              keyboardType="phone-pad"
-              placeholderTextColor="#9CA3AF"
-            />
+            <View style={styles.readonlyField}>
+              <Text style={styles.readonlyText}>{telephone || "Non renseigné"}</Text>
+            </View>
           </View>
 
+          {/* ✏️ Seul champ éditable */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Motif de consultation</Text>
+            <Text style={styles.label}>Motif de consultation *</Text>
             <TextInput
               value={motif}
               onChangeText={setMotif}
@@ -298,7 +293,7 @@ export default function BookingScreen() {
                 styles.textarea,
                 focusedField === "motif" && styles.inputFocused,
               ]}
-              placeholder="Décrivez le motif"
+              placeholder="Décrivez le motif de votre consultation"
               multiline
               numberOfLines={3}
               placeholderTextColor="#9CA3AF"
@@ -353,158 +348,60 @@ export default function BookingScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: "#374151",
-    textAlign: "center",
-  },
+  flex: { flex: 1, backgroundColor: "#F8FAFC" },
+  scrollContent: { padding: 20, paddingBottom: 40 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
+  errorText: { fontSize: 16, color: "#374151", textAlign: "center" },
   summaryHeader: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 4,
-    flexDirection: "row",
-    gap: 16,
-    alignItems: "center",
+    backgroundColor: "#fff", borderRadius: 20, padding: 20, marginBottom: 24,
+    shadowColor: "#000", shadowOpacity: 0.08, shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12, elevation: 4, flexDirection: "row", gap: 16, alignItems: "center",
   },
   avatarCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "#0066CC",
-    justifyContent: "center",
-    alignItems: "center",
+    width: 72, height: 72, borderRadius: 36, backgroundColor: "#0066CC",
+    justifyContent: "center", alignItems: "center",
   },
-  avatarText: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  headerText: {
-    flex: 1,
-  },
-  doctorName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  doctorSpecialty: {
-    fontSize: 16,
-    color: "#4B5563",
-    marginBottom: 12,
-  },
+  avatarText: { color: "#fff", fontSize: 24, fontWeight: "bold" },
+  headerText: { flex: 1 },
+  doctorName: { fontSize: 20, fontWeight: "bold", color: "#111827", marginBottom: 4 },
+  doctorSpecialty: { fontSize: 16, color: "#4B5563", marginBottom: 12 },
   badgeRow: {
-    alignSelf: "flex-start",
-    backgroundColor: "#E6F0FF",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    marginBottom: 10,
+    alignSelf: "flex-start", backgroundColor: "#E6F0FF", paddingVertical: 6,
+    paddingHorizontal: 12, borderRadius: 999, marginBottom: 10,
   },
-  badgeText: {
-    color: "#0066CC",
-    fontWeight: "600",
-  },
-  centerName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  centerLocation: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginTop: 2,
-  },
-  formSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#111827",
-    marginBottom: 16,
-  },
-  fieldGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    color: "#374151",
-    marginBottom: 8,
-    fontWeight: "600",
-  },
+  badgeText: { color: "#0066CC", fontWeight: "600" },
+  centerName: { fontSize: 16, fontWeight: "600", color: "#111827" },
+  centerLocation: { fontSize: 14, color: "#6B7280", marginTop: 2 },
+  formSection: { marginBottom: 24 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#111827", marginBottom: 8 },
+  helperText: { fontSize: 13, color: "#9CA3AF", marginBottom: 16 },
+  fieldGroup: { marginBottom: 16 },
+  label: { fontSize: 14, color: "#374151", marginBottom: 8, fontWeight: "600" },
   input: {
-    backgroundColor: "#fff",
+    backgroundColor: "#fff", borderWidth: 1, borderColor: "#E0E0E0",
+    borderRadius: 12, padding: 14, color: "#111827", fontSize: 16,
+  },
+  inputFocused: { borderColor: "#0066CC" },
+  textarea: { minHeight: 96, textAlignVertical: "top" },
+  readonlyField: {
+    backgroundColor: "#F3F4F6",
     borderWidth: 1,
-    borderColor: "#E0E0E0",
+    borderColor: "#E5E7EB",
     borderRadius: 12,
     padding: 14,
-    color: "#111827",
+  },
+  readonlyText: {
+    color: "#6B7280",
     fontSize: 16,
   },
-  inputFocused: {
-    borderColor: "#0066CC",
-  },
-  textarea: {
-    minHeight: 96,
-    textAlignVertical: "top",
-  },
-  summaryCard: {
-    backgroundColor: "#F5F7FA",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 12,
-  },
-  summaryEmoji: {
-    fontSize: 18,
-  },
-  summaryText: {
-    color: "#374151",
-    fontSize: 16,
-    lineHeight: 22,
-    flex: 1,
-  },
+  summaryCard: { backgroundColor: "#F5F7FA", borderRadius: 20, padding: 20, marginBottom: 24 },
+  summaryRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  summaryEmoji: { fontSize: 18 },
+  summaryText: { color: "#374151", fontSize: 16, lineHeight: 22, flex: 1 },
   confirmButton: {
-    backgroundColor: "#0066CC",
-    borderRadius: 16,
-    paddingVertical: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#0066CC",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 6,
+    backgroundColor: "#0066CC", borderRadius: 16, paddingVertical: 16,
+    justifyContent: "center", alignItems: "center", shadowColor: "#0066CC",
+    shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 6,
   },
-  confirmButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  confirmButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });

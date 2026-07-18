@@ -6,9 +6,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-
-const API_URL = "http://192.168.100.81:8000/api";
+import API_ENDPOINTS, { api, API_BASE_URL } from '../config/api';
 
 export default function LoginScreen() {
   const [email, setEmail]       = useState('');
@@ -16,7 +14,6 @@ export default function LoginScreen() {
   const [loading, setLoading]   = useState(false);
 
   const handleLogin = async () => {
-    // Validation
     if (!email.trim() || !password.trim()) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs');
       return;
@@ -24,22 +21,30 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      console.log(' Tentative de connexion à:', `${API_URL}/token/`);
-      
+      console.log('🔧 API_BASE_URL utilisée:', API_BASE_URL);
+      console.log('Tentative de connexion à:', `${API_BASE_URL}${API_ENDPOINTS.AUTH.TOKEN}`);
+
       // ── Étape 1 : Login avec token JWT ──────────────────
-      const res = await axios.post(`${API_URL}/token/`, {
+      const res = await api.post(API_ENDPOINTS.AUTH.TOKEN, {
         username: email,
         password: password,
       });
 
       const accessToken = res.data.access;
+      const refreshToken = res.data.refresh;
       console.log('✅ Token reçu');
 
-      // ── Étape 2 : Sauvegarder le token ──────────────────
+      // ── Étape 2 : Sauvegarder les tokens ────────────────
+      // ⚠️ IMPORTANT : utiliser les MÊMES clés que dans l'intercepteur (authToken / refreshToken)
+      await AsyncStorage.setItem('authToken', accessToken);
+      if (refreshToken) {
+        await AsyncStorage.setItem('refreshToken', refreshToken);
+      }
+      // Garder aussi 'access_token' si d'autres écrans l'utilisent encore
       await AsyncStorage.setItem('access_token', accessToken);
 
       // ── Étape 3 : Récupérer le rôle ─────────────────────
-      const profileRes = await axios.get(`${API_URL}/auth/me/`, {
+      const profileRes = await api.get(API_ENDPOINTS.AUTH.ME, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
 
@@ -56,15 +61,13 @@ export default function LoginScreen() {
 
     } catch (e) {
       console.log('❌ Erreur complète:', e);
-      
-      // Déterminer le type d'erreur
+
       let errorMessage = 'Erreur inconnue';
-      
+
       if (e.response) {
-        // Réponse du serveur mais erreur
         console.log('Code:', e.response.status);
         console.log('Data:', e.response.data);
-        
+
         if (e.response.status === 401 || e.response.status === 400) {
           errorMessage = 'Identifiants incorrects';
         } else if (e.response.status === 500) {
@@ -73,13 +76,12 @@ export default function LoginScreen() {
           errorMessage = `Erreur ${e.response.status}: ${e.response.data?.detail || e.response.data?.error || 'Erreur serveur'}`;
         }
       } else if (e.request) {
-        // Pas de réponse du serveur
         console.log('Pas de réponse du serveur');
-        errorMessage = `Impossible d'accéder au serveur.\nVérifiez:\n• L'adresse: ${API_URL}\n• Que le serveur est lancé\n• Votre connexion réseau`;
+        errorMessage = `Impossible d'accéder au serveur.\nVérifiez:\n• L'adresse: ${API_BASE_URL}\n• Que le serveur est lancé\n• Votre connexion réseau`;
       } else {
         errorMessage = e.message;
       }
-      
+
       Alert.alert('Erreur de connexion', errorMessage);
     } finally {
       setLoading(false);
