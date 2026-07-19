@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django_filters',
     'medical',
     'rest_framework_simplejwt',
+     'chatbot',
 ]
 
 MIDDLEWARE = [
