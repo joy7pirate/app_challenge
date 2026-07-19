@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
     MedecinDashboardView,
@@ -72,4 +72,5 @@ urlpatterns = [
         'patch': 'partial_update',
         'put': 'partial_update',
     }), name='patients-detail'),
+     path("chatbot/", include("chatbot.urls")),
 ]
