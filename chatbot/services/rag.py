@@ -1,58 +1,112 @@
-from chatbot.services.loader import load_documents
-from chatbot.services.splitter import split_documents
-from chatbot.services.embeddings import embed_documents, embed_text
+from chatbot.services.vectorstore import VectorStore
 from chatbot.services.llm import ask_llm
-
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-
-
-# Chargement des documents
-documents = load_documents("medical_documents")
-
-# Découpage
-chunks = split_documents(documents)
-
-# Création des embeddings
-chunk_embeddings = embed_documents(chunks)
+from chatbot.services.prompt_builder import build_prompt
+from chatbot.services.question_router import detect_intent
+from chatbot.services.safe_context import SafeContext
+from chatbot.services.conversation_manager import conversation_manager
+from chatbot.services.emergency import (
+    is_emergency,
+    EMERGENCY_MESSAGE,
+)
 
 
-def search(query, top_k=3):
-    """
-    Recherche les morceaux les plus pertinents.
-    """
+vectorstore = VectorStore()
 
-    query_embedding = embed_text(query)
-
-    similarities = cosine_similarity(
-        [query_embedding],
-        chunk_embeddings
-    )[0]
-
-    best_indices = np.argsort(similarities)[::-1][:top_k]
-
-    return [chunks[i] for i in best_indices]
+if vectorstore.exists():
+    vectorstore.load()
+else:
+    vectorstore.build()
 
 
-def ask_rag(question):
-    """
-    Pose une question au RAG.
-    """
+safe_context = SafeContext()
 
-    context = "\n\n".join(search(question))
 
-    prompt = f"""
-Tu es MedaClick AI.
+def ask_rag(user, question):
 
-Réponds uniquement à partir du contexte suivant.
+    ####################################################
+    # 1. Vérification urgence
+    ####################################################
 
-Contexte :
+    if is_emergency(question):
+        return EMERGENCY_MESSAGE
 
-{context}
+    ####################################################
+    # 2. Détection du type de question
+    ####################################################
 
-Question :
+    intent = detect_intent(question)
 
-{question}
-"""
+    ####################################################
+    # 3. Recherche documentaire
+    ####################################################
 
-    return ask_llm(prompt)
+    pdf_context = ""
+
+    if intent == "general":
+
+        documents = vectorstore.search(
+            question,
+            top_k=5
+        )
+
+        pdf_context = "\n\n".join(documents)
+
+    ####################################################
+    # 4. Recherche dans les données du patient
+    ####################################################
+
+    patient_context = safe_context.build(
+        user=user,
+        intent=intent
+    )
+
+    ####################################################
+    # 5. Construction du prompt
+    ####################################################
+
+    prompt = build_prompt(
+        question=question,
+        pdf_context=pdf_context,
+        patient_context=patient_context
+    )
+
+    ####################################################
+    # 6. Historique
+    ####################################################
+
+    if user.is_authenticated:
+        history_id = user.id
+    else:
+        history_id = "anonymous"
+
+    history = conversation_manager.get_history(
+        history_id
+    )
+
+    ####################################################
+    # 7. Appel du LLM
+    ####################################################
+
+    answer = ask_llm(
+        question=prompt,
+        context="",
+        history=history
+    )
+
+    ####################################################
+    # 8. Sauvegarde mémoire
+    ####################################################
+
+    conversation_manager.add_message(
+        history_id,
+        "user",
+        question
+    )
+
+    conversation_manager.add_message(
+        history_id,
+        "assistant",
+        answer
+    )
+
+    return answer

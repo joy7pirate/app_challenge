@@ -1,18 +1,27 @@
 from sentence_transformers import SentenceTransformer
 
-# Chargé une seule fois au démarrage
-model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+MODEL_NAME = "BAAI/bge-small-en-v1.5"
+
+print(f"Chargement du modèle d'embeddings : {MODEL_NAME}")
+
+model = SentenceTransformer(MODEL_NAME)
 
 
-def embed_text(text):
+def embed_text(text: str):
     """
-    Retourne le vecteur d'un texte.
+    Retourne l'embedding d'un texte.
     """
-    return model.encode(text).tolist()
+    return model.encode(
+        text,
+        normalize_embeddings=True
+    ).tolist()
 
 
-def embed_documents(chunks):
+def embed_documents(documents: list[str]):
     """
-    Retourne une liste de vecteurs.
+    Retourne les embeddings d'une liste de documents.
     """
-    return model.encode(chunks).tolist()
+    return model.encode(
+        documents,
+        normalize_embeddings=True
+    ).tolist()
