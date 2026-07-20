@@ -213,14 +213,8 @@ export const buildUrl = (endpoint, params = {}) => {
 
 export const apiService = {
   // 🔐 AUTH
-  register: (email, password, telephone, date_naissance) =>
-    api.post(API_ENDPOINTS.AUTH.REGISTER, {
-      email,
-      password,
-      telephone,
-      date_naissance,
-    }),
-
+register: (payload) =>
+  api.post(API_ENDPOINTS.AUTH.REGISTER, payload),
   login: (email, password) =>
     api.post(API_ENDPOINTS.AUTH.TOKEN, { email, password }),
 

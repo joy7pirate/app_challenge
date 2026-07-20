@@ -1,0 +1,1194 @@
+[
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$tRJ0WRHOtrXvUL3hVs3JwB$5BUDRYzjMIgDt+0DUyFv+lRFOSeVkxXUrNt4Y1Xpc4E=",
+    "last_login": "2026-07-04T13:08:19.708Z",
+    "is_superuser": true,
+    "username": "joypirate",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-05-24T17:26:32.183Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$5md7T2CsETjVHWPIVWDLTA$d01MhUrQgLWJ2oQXfgnHWKD3rFiGNhGcZ6j18y9EckE=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "test@test.com",
+    "first_name": "test",
+    "last_name": "logo",
+    "email": "test@test.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-05-25T21:39:51.100Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$wpIxUp2u8ETXcVOQ96Soeg$d+aCeFRo98OGxJwM77xwn1NuP6j0fiFLSgkh2eAwOZk=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "gana",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-03T21:44:06.514Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$7nic9cfHV5kEzJjoP4FeUD$/Le0WLIVMchPgTETHLxJqBQKgdiruwl27ShYshzgUxY=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "guimi@gmail.com",
+    "first_name": "guimi",
+    "last_name": "btc",
+    "email": "guimi@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-06T13:39:37.466Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$eoqilVDa7yHtprTLenkzQu$M5cDASI7PCV0xttOyGrllNW+SMGhNZOqRKQbeSSSuZc=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "test@gmail.com",
+    "first_name": "Ali",
+    "last_name": "Ben",
+    "email": "test@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-18T00:07:21.484Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$KrXGlRtuQ2oWLK6cIeB6F3$PR7Ti71vzefyvBKr1WpuAcZfNgFaAKnHIJSu50UYZU8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "test1@gmail.com",
+    "first_name": "Ali",
+    "last_name": "Ben",
+    "email": "test1@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-18T00:34:06.806Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$R90ktDg1hv0lLjChgWA3b6$u06dK5n3Dc9kAqzRRJxFGDYHJrVDUJA+waOu/B9AK7c=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "medecin@gmail.com",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-22T22:22:05.054Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$H24GtVqvXn3uLndpWISMnu$7poVrz9Id6GVbnAxbf53KQ7WoJPji1dn/r0WhT7dSYg=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "john@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "john@example.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-22T22:45:57.213Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$1hG29EHatlQCOgwpnVeiU6$n61qe7JTVfwiXyG7c8BAZTQvarye/0DGZrxQgXjTp94=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "docteurM@example.com",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-27T00:54:54.841Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$pcoINfx3nJdTLWM1YQWJeR$ibfKjmyWNVgu/nxCbeTjyU0mM2WbpvjQt5u6Hr+hKH4=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "gamin@gmail.com",
+    "first_name": "Gamin",
+    "last_name": "Gamin",
+    "email": "gamin@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-30T23:08:59.213Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$nle9d7ccILRDseUD4J8Bmj$Qbt9Gt75VEEPIUciLtUgPFs0MyIKS8J5kjZSYvDrrRk=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "patient1@example.com",
+    "first_name": "patient1",
+    "last_name": "patient1",
+    "email": "patient1@example.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-05T14:51:39.075Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$v2fnq1cKu0rYQKACgyJPHT$sgqDr7yQhWa1Mu1rweqeasQ/bUUz5vf6dvWA5N0o0eo=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "patient2@gmail.com",
+    "first_name": "patient",
+    "last_name": "patient",
+    "email": "patient2@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-05T17:04:14.327Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$Gw1cugPVnvZYtqocwcwEWJ$glOPhX/e3XUps7Yu4a7SjPWnPPAex98pjDDsRak+EBo=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "patient3@gmail.com",
+    "first_name": "Patient3",
+    "last_name": "patient3",
+    "email": "patient3@gmail.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-08T21:47:49.992Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "6uyg4ur6xes5p8ifgqurxkwpj18fw2sz",
+  "fields": {
+    "session_data": ".eJxVjDkOwjAQAP-yNbJ8Ym9Ket4Q7WFIACVSnFSIv6NIKaCdGc0betrWod9aXfpRoQMPp1_GJM867UIfNN1nI_O0LiObPTGHbeY6a31djvZvMFAboAOO6pFTcJxSoaxSbi4gOY6qDm20FpmKaHS5Bl_wXMW7lLyEkBFDhM8X2rg3Eg:1wa0kS:TIhawcyc_lK47AnxsCYjUTlgt-FGmdS1mpSUId1B6sg",
+    "expire_date": "2026-07-02T00:36:48.933Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "gk4y3fulr8v7kmwtzd7ufeaywelpqbxd",
+  "fields": {
+    "session_data": ".eJxVjMsKwjAQAP9lzxKad9qjd78hbDYbU5UUmvYk_rsUetDrzDBviLhvNe6d1zhnmEDC5ZclpCe3Q-QHtvsiaGnbOidxJOK0XdyWzK_r2f4NKvYKE_giszaqYAnaUsnkkGxQNow5aa9ZWmmKQZmUNMxuMB5Hp_yATBySIvh8Ae_JOC0:1wFIgR:I7P2CIvxDixETTMw6rY3TittY233-p1Vidjdvnsxtuo",
+    "expire_date": "2026-05-05T21:31:03.365Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "sndjwge0eal9rgk6pgar4md7ezif2ltc",
+  "fields": {
+    "session_data": ".eJxVjDkOwjAQAP-yNbJ8Ym9Ket4Q7WFIACVSnFSIv6NIKaCdGc0betrWod9aXfpRoQMPp1_GJM867UIfNN1nI_O0LiObPTGHbeY6a31djvZvMFAboAOO6pFTcJxSoaxSbi4gOY6qDm20FpmKaHS5Bl_wXMW7lLyEkBFDhM8X2rg3Eg:1wRCbA:92DyVqN3VA6Szqx9GJ8NkYmvxGpWIXsQgBQ6J4AXEUQ",
+    "expire_date": "2026-06-07T17:26:48.174Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "wv7m2ct2jp8hzbwiwt6beodp4yj6nya1",
+  "fields": {
+    "session_data": ".eJxVjDkOwjAQAP-yNbJ8Ym9Ket4Q7WFIACVSnFSIv6NIKaCdGc0betrWod9aXfpRoQMPp1_GJM867UIfNN1nI_O0LiObPTGHbeY6a31djvZvMFAboAOO6pFTcJxSoaxSbi4gOY6qDm20FpmKaHS5Bl_wXMW7lLyEkBFDhM8X2rg3Eg:1wRdzM:9hcTvfnVGHsY4wWzJz5_QayoKIW3os0YBw3MqW4eju8",
+    "expire_date": "2026-06-08T22:41:36.948Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "ztiysvk1xhvkrsyf0xkbqsyd9q5f6ic1",
+  "fields": {
+    "session_data": ".eJxVjDkOwjAQAP-yNbJ8Ym9Ket4Q7WFIACVSnFSIv6NIKaCdGc0betrWod9aXfpRoQMPp1_GJM867UIfNN1nI_O0LiObPTGHbeY6a31djvZvMFAboAOO6pFTcJxSoaxSbi4gOY6qDm20FpmKaHS5Bl_wXMW7lLyEkBFDhM8X2rg3Eg:1wg06V:VsdR_-Ji6gSrNA-d3zsiLnWsKVSeB1MVQCbRkVxGrEg",
+    "expire_date": "2026-07-18T13:08:19.721Z"
+  }
+},
+{
+  "model": "medical.centresante",
+  "pk": 1,
+  "fields": {
+    "nom": "golden_life",
+    "adresse": "badala",
+    "telephone": "09090909",
+    "email": "clinic@gmail.com",
+    "ville": "Bamako",
+    "latitude": 12.61986,
+    "longitude": -7.994784
+  }
+},
+{
+  "model": "medical.centresante",
+  "pk": 2,
+  "fields": {
+    "nom": "briguant",
+    "adresse": "abc",
+    "telephone": "09090909",
+    "email": "sd@gmail.com",
+    "ville": "Bamako",
+    "latitude": 12.592,
+    "longitude": -8.05882
+  }
+},
+{
+  "model": "medical.medecin",
+  "pk": 1,
+  "fields": {
+    "user": [
+      "medecin@gmail.com"
+    ],
+    "nom": "medoc",
+    "prenom": "medoc",
+    "specialite": "pediatre",
+    "telephone": "70707070",
+    "email": "medecin@gmail.com",
+    "centre": 1
+  }
+},
+{
+  "model": "medical.medecin",
+  "pk": 2,
+  "fields": {
+    "user": [
+      "docteurM@example.com"
+    ],
+    "nom": "dds",
+    "prenom": "dds",
+    "specialite": "bling",
+    "telephone": "70707070",
+    "email": "docteurM@gmail.com",
+    "centre": 2
+  }
+},
+{
+  "model": "medical.disponibilite",
+  "pk": 10,
+  "fields": {
+    "medecin": 1,
+    "jour": "Lundi",
+    "heure_debut": "12:00:00",
+    "heure_fin": "12:30:00"
+  }
+},
+{
+  "model": "medical.disponibilite",
+  "pk": 11,
+  "fields": {
+    "medecin": 1,
+    "jour": "Mardi",
+    "heure_debut": "07:00:00",
+    "heure_fin": "12:00:00"
+  }
+},
+{
+  "model": "medical.disponibilite",
+  "pk": 12,
+  "fields": {
+    "medecin": 1,
+    "jour": "Mercredi",
+    "heure_debut": "08:00:00",
+    "heure_fin": "12:00:00"
+  }
+},
+{
+  "model": "medical.disponibilite",
+  "pk": 13,
+  "fields": {
+    "medecin": 1,
+    "jour": "Lundi",
+    "heure_debut": "11:00:00",
+    "heure_fin": "13:00:00"
+  }
+},
+{
+  "model": "medical.disponibilite",
+  "pk": 14,
+  "fields": {
+    "medecin": 2,
+    "jour": "Lundi",
+    "heure_debut": "07:20:00",
+    "heure_fin": "08:20:00"
+  }
+},
+{
+  "model": "medical.disponibilite",
+  "pk": 15,
+  "fields": {
+    "medecin": 2,
+    "jour": "Mardi",
+    "heure_debut": "10:00:00",
+    "heure_fin": "12:00:00"
+  }
+},
+{
+  "model": "medical.patient",
+  "pk": 1,
+  "fields": {
+    "user": [
+      "test@test.com"
+    ],
+    "telephone": "707070",
+    "date_naissance": "1991-01-01",
+    "adresse": "logobi"
+  }
+},
+{
+  "model": "medical.patient",
+  "pk": 2,
+  "fields": {
+    "user": [
+      "guimi@gmail.com"
+    ],
+    "telephone": "70707070",
+    "date_naissance": "1991-06-06",
+    "adresse": "bdl2"
+  }
+},
+{
+  "model": "medical.patient",
+  "pk": 3,
+  "fields": {
+    "user": [
+      "test@gmail.com"
+    ],
+    "telephone": "0600000000",
+    "date_naissance": "2000-01-01",
+    "adresse": "Alger"
+  }
+},
+{
+  "model": "medical.patient",
+  "pk": 4,
+  "fields": {
+    "user": [
+      "test1@gmail.com"
+    ],
+    "telephone": "0600000000",
+    "date_naissance": "2000-01-01",
+    "adresse": "Alger"
+  }
+},
+{
+  "model": "medical.patient",
+  "pk": 5,
+  "fields": {
+    "user": [
+      "john@example.com"
+    ],
+    "telephone": "0612345678",
+    "date_naissance": "1990-01-01",
+    "adresse": "123 rue example"
+  }
+},
+{
+  "model": "medical.patient",
+  "pk": 6,
+  "fields": {
+    "user": [
+      "gamin@gmail.com"
+    ],
+    "telephone": "80808080",
+    "date_naissance": "2003-06-30",
+    "adresse": "Bdl1"
+  }
+},
+{
+  "model": "medical.patient",
+  "pk": 7,
+  "fields": {
+    "user": [
+      "patient1@example.com"
+    ],
+    "telephone": "70707070",
+    "date_naissance": "1975-07-05",
+    "adresse": "bdl3"
+  }
+},
+{
+  "model": "medical.patient",
+  "pk": 8,
+  "fields": {
+    "user": [
+      "patient2@gmail.com"
+    ],
+    "telephone": "90909090",
+    "date_naissance": "1970-01-30",
+    "adresse": "bld"
+  }
+},
+{
+  "model": "medical.patient",
+  "pk": 9,
+  "fields": {
+    "user": [
+      "patient3@gmail.com"
+    ],
+    "telephone": "80808080",
+    "date_naissance": "2003-07-10",
+    "adresse": "FrÞre"
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 2,
+  "fields": {
+    "patient": 5,
+    "medecin": 1,
+    "jour": "2026-06-20",
+    "heure": "10:00:00",
+    "motif": "lmg motif",
+    "statut": "termine",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 3,
+  "fields": {
+    "patient": 5,
+    "medecin": 1,
+    "jour": "2026-06-29",
+    "heure": "10:00:00",
+    "motif": "isigi motif",
+    "statut": "refuse",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 4,
+  "fields": {
+    "patient": 5,
+    "medecin": 1,
+    "jour": "2026-06-25",
+    "heure": "10:00:00",
+    "motif": "i moif",
+    "statut": "termine",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 5,
+  "fields": {
+    "patient": 5,
+    "medecin": 1,
+    "jour": "2026-06-26",
+    "heure": "10:00:00",
+    "motif": "i moif",
+    "statut": "refuse",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 6,
+  "fields": {
+    "patient": 5,
+    "medecin": 1,
+    "jour": "2026-06-26",
+    "heure": "10:00:00",
+    "motif": "i moif",
+    "statut": "refuse",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 7,
+  "fields": {
+    "patient": 5,
+    "medecin": 2,
+    "jour": "2026-06-29",
+    "heure": "07:20:00",
+    "motif": "Hhv",
+    "statut": "accepte",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 8,
+  "fields": {
+    "patient": 5,
+    "medecin": 2,
+    "jour": "2026-06-29",
+    "heure": "07:20:00",
+    "motif": "Mal de tÛte",
+    "statut": "refuse",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 9,
+  "fields": {
+    "patient": 6,
+    "medecin": 1,
+    "jour": "2026-07-01",
+    "heure": "08:00:00",
+    "motif": "From",
+    "statut": "termine",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 10,
+  "fields": {
+    "patient": 7,
+    "medecin": 1,
+    "jour": "2026-07-09",
+    "heure": "01:00:00",
+    "motif": "gorge",
+    "statut": "confirme",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 11,
+  "fields": {
+    "patient": 8,
+    "medecin": 1,
+    "jour": "2026-08-06",
+    "heure": "12:00:00",
+    "motif": "Mal de fesse",
+    "statut": "confirme",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 12,
+  "fields": {
+    "patient": 8,
+    "medecin": 1,
+    "jour": "2026-07-06",
+    "heure": "12:00:00",
+    "motif": "sdsd",
+    "statut": "confirme",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 13,
+  "fields": {
+    "patient": 6,
+    "medecin": 1,
+    "jour": "2026-07-13",
+    "heure": "12:00:00",
+    "motif": "Djdj",
+    "statut": "refuse",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 14,
+  "fields": {
+    "patient": 7,
+    "medecin": 1,
+    "jour": "2026-07-15",
+    "heure": "08:00:00",
+    "motif": "Force",
+    "statut": "confirme",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 15,
+  "fields": {
+    "patient": 9,
+    "medecin": 1,
+    "jour": "2026-07-14",
+    "heure": "07:00:00",
+    "motif": "Q",
+    "statut": "reporte",
+    "nouveau_jour": "2026-07-10",
+    "nouvelle_heure": "01:21:00",
+    "commentaire_medecin": "Qqq"
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 16,
+  "fields": {
+    "patient": 9,
+    "medecin": 1,
+    "jour": "2026-07-13",
+    "heure": "12:00:00",
+    "motif": "Q",
+    "statut": "reporte",
+    "nouveau_jour": "2026-07-23",
+    "nouvelle_heure": "10:55:00",
+    "commentaire_medecin": "Fictif"
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 17,
+  "fields": {
+    "patient": 7,
+    "medecin": 1,
+    "jour": "2026-07-22",
+    "heure": "08:00:00",
+    "motif": "Guide",
+    "statut": "en_attente",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 18,
+  "fields": {
+    "patient": 7,
+    "medecin": 2,
+    "jour": "2026-07-20",
+    "heure": "07:20:00",
+    "motif": "Essai voir pour regarder",
+    "statut": "en_attente",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.rendezvous",
+  "pk": 19,
+  "fields": {
+    "patient": 7,
+    "medecin": 1,
+    "jour": "2026-07-20",
+    "heure": "11:00:00",
+    "motif": "fictif",
+    "statut": "confirme",
+    "nouveau_jour": null,
+    "nouvelle_heure": null,
+    "commentaire_medecin": null
+  }
+},
+{
+  "model": "medical.dossiermedical",
+  "pk": 1,
+  "fields": {
+    "patient": 6,
+    "groupe_sanguin": "O-",
+    "allergies": "",
+    "antecedents": "Operation Tete",
+    "maladies_chroniques": "Toux",
+    "date_creation": "2026-06-30T23:08:59.690Z",
+    "date_mise_a_jour": "2026-06-30T23:36:19.803Z"
+  }
+},
+{
+  "model": "medical.dossiermedical",
+  "pk": 2,
+  "fields": {
+    "patient": 7,
+    "groupe_sanguin": "A-",
+    "allergies": "gigi",
+    "antecedents": "palu",
+    "maladies_chroniques": "toux",
+    "date_creation": "2026-07-05T14:51:39.636Z",
+    "date_mise_a_jour": "2026-07-05T15:13:36.747Z"
+  }
+},
+{
+  "model": "medical.dossiermedical",
+  "pk": 3,
+  "fields": {
+    "patient": 8,
+    "groupe_sanguin": null,
+    "allergies": null,
+    "antecedents": null,
+    "maladies_chroniques": null,
+    "date_creation": "2026-07-05T17:04:14.907Z",
+    "date_mise_a_jour": "2026-07-05T17:04:14.907Z"
+  }
+},
+{
+  "model": "medical.dossiermedical",
+  "pk": 4,
+  "fields": {
+    "patient": 9,
+    "groupe_sanguin": null,
+    "allergies": null,
+    "antecedents": null,
+    "maladies_chroniques": null,
+    "date_creation": "2026-07-08T21:47:50.502Z",
+    "date_mise_a_jour": "2026-07-08T21:47:50.502Z"
+  }
+},
+{
+  "model": "medical.consultation",
+  "pk": 1,
+  "fields": {
+    "statut_consultation": "en_cours",
+    "date_cloture": null,
+    "dossier_medical": 3,
+    "rdv": 11,
+    "medecin": 1,
+    "date": "2026-07-05T18:37:38.956Z",
+    "motif": "ffd",
+    "diagnostic": "dd",
+    "traitement": "sss",
+    "notes": "dsd",
+    "is_verrouille": false
+  }
+},
+{
+  "model": "medical.consultation",
+  "pk": 2,
+  "fields": {
+    "statut_consultation": "en_cours",
+    "date_cloture": null,
+    "dossier_medical": 3,
+    "rdv": 12,
+    "medecin": 1,
+    "date": "2026-07-05T21:32:21.897Z",
+    "motif": "ERROR  Erreur crÚation consultation : {\"error\": \"Une consultation existe dÚjÓ pour ce rendez-vous.\"}",
+    "diagnostic": "ERROR  Erreur crÚation consultation : {\"error\": \"Une consultation existe dÚjÓ pour ce rendez-vous.\"}",
+    "traitement": "ERROR  Erreur crÚation consultation : {\"error\": \"Une consultation existe dÚjÓ pour ce rendez-vous.\"}",
+    "notes": "ERROR  Erreur crÚation consultation : {\"error\": \"Une consultation existe dÚjÓ pour ce rendez-vous.\"}",
+    "is_verrouille": false
+  }
+},
+{
+  "model": "medical.consultation",
+  "pk": 3,
+  "fields": {
+    "statut_consultation": "en_cours",
+    "date_cloture": null,
+    "dossier_medical": 2,
+    "rdv": 14,
+    "medecin": 1,
+    "date": "2026-07-08T01:47:24.140Z",
+    "motif": "Motif essai2",
+    "diagnostic": "Essai2",
+    "traitement": "Essai2",
+    "notes": "Essai2",
+    "is_verrouille": false
+  }
+},
+{
+  "model": "medical.consultation",
+  "pk": 4,
+  "fields": {
+    "statut_consultation": "en_cours",
+    "date_cloture": null,
+    "dossier_medical": 2,
+    "rdv": 19,
+    "medecin": 1,
+    "date": "2026-07-18T13:26:22.973Z",
+    "motif": "Fictif",
+    "diagnostic": "Fictif",
+    "traitement": "Fictif",
+    "notes": "Fictif",
+    "is_verrouille": false
+  }
+},
+{
+  "model": "medical.ordonnance",
+  "pk": 1,
+  "fields": {
+    "consultation": 2,
+    "medicaments": "essai",
+    "duree": "essai",
+    "instructions": "essai",
+    "date_emission": "2026-07-05T21:32:42.882Z"
+  }
+},
+{
+  "model": "medical.ordonnance",
+  "pk": 2,
+  "fields": {
+    "consultation": 1,
+    "medicaments": "essai",
+    "duree": "essai",
+    "instructions": "essai",
+    "date_emission": "2026-07-05T22:52:02.236Z"
+  }
+},
+{
+  "model": "medical.ordonnance",
+  "pk": 3,
+  "fields": {
+    "consultation": 3,
+    "medicaments": "1",
+    "duree": "1",
+    "instructions": "Q",
+    "date_emission": "2026-07-08T01:47:37.075Z"
+  }
+},
+{
+  "model": "medical.ordonnance",
+  "pk": 4,
+  "fields": {
+    "consultation": 4,
+    "medicaments": "Fictif",
+    "duree": "7",
+    "instructions": "Fictif",
+    "date_emission": "2026-07-18T13:26:43.198Z"
+  }
+},
+{
+  "model": "medical.examen",
+  "pk": 1,
+  "fields": {
+    "dossier_medical": 1,
+    "consultation": null,
+    "type_examen": "analyse",
+    "description": "DÆhab",
+    "resultat": "Zkxk",
+    "fichier": "",
+    "date": "2026-06-30T23:55:02.145Z"
+  }
+},
+{
+  "model": "medical.examen",
+  "pk": 2,
+  "fields": {
+    "dossier_medical": 3,
+    "consultation": null,
+    "type_examen": "analyse",
+    "description": "essai",
+    "resultat": "essai",
+    "fichier": "",
+    "date": "2026-07-05T23:03:43.047Z"
+  }
+},
+{
+  "model": "medical.examen",
+  "pk": 3,
+  "fields": {
+    "dossier_medical": 2,
+    "consultation": null,
+    "type_examen": "analyse",
+    "description": "Fictif",
+    "resultat": "Fictif",
+    "fichier": "",
+    "date": "2026-07-18T13:27:07.650Z"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 4,
+  "fields": {
+    "action_time": "2026-06-03T21:44:07.033Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "auth",
+      "user"
+    ],
+    "object_id": "4",
+    "object_repr": "gana",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 5,
+  "fields": {
+    "action_time": "2026-06-22T22:22:05.618Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "auth",
+      "user"
+    ],
+    "object_id": "8",
+    "object_repr": "medecin@gmail.com",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 6,
+  "fields": {
+    "action_time": "2026-06-22T22:22:57.830Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "medecin"
+    ],
+    "object_id": "1",
+    "object_repr": "medoc medoc - pediatre",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 7,
+  "fields": {
+    "action_time": "2026-06-27T00:54:57.818Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "auth",
+      "user"
+    ],
+    "object_id": "10",
+    "object_repr": "docteurM@example.com",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 8,
+  "fields": {
+    "action_time": "2026-06-27T00:57:02.211Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "medecin"
+    ],
+    "object_id": "2",
+    "object_repr": "dds dds - bling",
+    "action_flag": 1,
+    "change_message": "[{\"added\": {}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 9,
+  "fields": {
+    "action_time": "2026-07-15T10:36:43.704Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "centresante"
+    ],
+    "object_id": "1",
+    "object_repr": "golden_life",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Latitude\", \"Longitude\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 10,
+  "fields": {
+    "action_time": "2026-07-15T10:40:57.165Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "centresante"
+    ],
+    "object_id": "1",
+    "object_repr": "golden_life",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Latitude\", \"Longitude\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 11,
+  "fields": {
+    "action_time": "2026-07-15T10:43:32.075Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "centresante"
+    ],
+    "object_id": "1",
+    "object_repr": "golden_life",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Latitude\", \"Longitude\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 12,
+  "fields": {
+    "action_time": "2026-07-15T10:46:25.728Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "centresante"
+    ],
+    "object_id": "1",
+    "object_repr": "golden_life",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Latitude\", \"Longitude\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 13,
+  "fields": {
+    "action_time": "2026-07-15T10:56:59.948Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "centresante"
+    ],
+    "object_id": "1",
+    "object_repr": "golden_life",
+    "action_flag": 2,
+    "change_message": "[]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 14,
+  "fields": {
+    "action_time": "2026-07-15T10:59:25.045Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "centresante"
+    ],
+    "object_id": "1",
+    "object_repr": "golden_life",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Latitude\", \"Longitude\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 15,
+  "fields": {
+    "action_time": "2026-07-15T11:00:29.366Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "centresante"
+    ],
+    "object_id": "1",
+    "object_repr": "golden_life",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Longitude\"]}}]"
+  }
+},
+{
+  "model": "admin.logentry",
+  "pk": 16,
+  "fields": {
+    "action_time": "2026-07-15T11:03:37.935Z",
+    "user": [
+      "joypirate"
+    ],
+    "content_type": [
+      "medical",
+      "centresante"
+    ],
+    "object_id": "1",
+    "object_repr": "golden_life",
+    "action_flag": 2,
+    "change_message": "[{\"changed\": {\"fields\": [\"Latitude\", \"Longitude\"]}}]"
+  }
+}
+]

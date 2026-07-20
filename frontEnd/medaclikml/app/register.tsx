@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, KeyboardAvoidingView, ScrollView, Platform
+  Alert, KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { apiService } from '../config/api'; // ⚠️ adaptez le chemin selon votre arborescence
 
 export default function RegisterScreen() {
   const [firstName, setFirstName] = useState('');
@@ -15,6 +16,7 @@ export default function RegisterScreen() {
   const [dateNaissance, setDateNaissance] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const formattedDateNaissance = dateNaissance
@@ -26,35 +28,42 @@ export default function RegisterScreen() {
     : '';
 
   const handleRegister = async () => {
+    // Validation des champs
+    if (!firstName || !lastName || !email || !password) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires.');
+      return;
+    }
     if (!dateNaissance) {
       Alert.alert('Erreur', 'Veuillez sélectionner votre date de naissance.');
       return;
     }
 
+    setLoading(true);
     try {
-      const response = await fetch('http://192.168.100.81:8000/api/register/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          telephone,
-          date_naissance: dateNaissance.toISOString().split('T')[0],
-          adresse,
-          password,
-        }),
-      });
-      const data = await response.json();
+      const dateStr = dateNaissance.toISOString().split('T')[0];
 
-      if (response.ok) {
-        Alert.alert('Succès', 'Compte créé !');
-        router.push('/LoginScreen');
-      } else {
-        Alert.alert('Erreur', JSON.stringify(data));
-      }
-    } catch (error) {
-      Alert.alert('Erreur', 'Connexion impossible au serveur');
+      // apiService.register(email, password, telephone, date_naissance)
+const response = await apiService.register({
+  first_name: firstName,
+  last_name: lastName,
+  email,
+  password,
+  telephone,
+  date_naissance: dateStr,
+  adresse,
+});
+      // Si votre serializer accepte aussi first_name/last_name/adresse,
+      // il faudra étendre apiService.register() côté api.js pour les inclure.
+      // Voir remarque plus bas ⬇️
+
+      Alert.alert('Succès', 'Compte créé !');
+      router.push('/LoginScreen');
+    } catch (error: any) {
+      console.log('Erreur register:', error.response?.data || error.message);
+      const data = error.response?.data;
+      Alert.alert('Erreur', data ? JSON.stringify(data) : 'Connexion impossible au serveur');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -148,8 +157,16 @@ export default function RegisterScreen() {
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-          <Text style={styles.buttonText}>S'inscrire</Text>
+        <TouchableOpacity
+          style={[styles.button, loading && { opacity: 0.6 }]}
+          onPress={handleRegister}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>S'inscrire</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.push('/LoginScreen')}>
@@ -205,6 +222,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 10,
+    minHeight: 50,
+    justifyContent: 'center',
   },
   buttonText: {
     color: 'white',
