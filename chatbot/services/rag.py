@@ -9,7 +9,6 @@ from chatbot.services.emergency import (
     EMERGENCY_MESSAGE,
 )
 
-
 vectorstore = VectorStore()
 
 if vectorstore.exists():
@@ -17,75 +16,55 @@ if vectorstore.exists():
 else:
     vectorstore.build()
 
-
 safe_context = SafeContext()
 
 
 def ask_rag(user, question):
 
-    ####################################################
-    # 1. Vérification urgence
-    ####################################################
-
     if is_emergency(question):
         return EMERGENCY_MESSAGE
 
-    ####################################################
-    # 2. Détection du type de question
-    ####################################################
-
     intent = detect_intent(question)
 
-    ####################################################
-    # 3. Recherche documentaire
-    ####################################################
+    # #### 1. Intent detection
+    print("=== INTENT ===", intent)
 
     pdf_context = ""
 
     if intent == "general":
+        # #### 2. Retrieval
+        documents = vectorstore.search(question, top_k=5)
 
-        documents = vectorstore.search(
-            question,
-            top_k=5
-        )
+        print("=== DOCUMENTS TROUVÉS ===", len(documents))
+        for i, d in enumerate(documents):
+            print(f"--- doc {i} ---")
+            print(d[:300])
 
         pdf_context = "\n\n".join(documents)
 
-    ####################################################
-    # 4. Recherche dans les données du patient
-    ####################################################
+    patient_context = safe_context.build(user=user, intent=intent)
 
-    patient_context = safe_context.build(
-        user=user,
-        intent=intent
-    )
-
-    ####################################################
-    # 5. Construction du prompt
-    ####################################################
-
+    # #### 3. Prompt construction
     prompt = build_prompt(
         question=question,
         pdf_context=pdf_context,
         patient_context=patient_context
     )
 
-    ####################################################
-    # 6. Historique
-    ####################################################
+    # #### 4. PDF context verification
+    print("=== PDF CONTEXT FINAL ===")
+    print(pdf_context[:1000] if pdf_context else "(VIDE)")
 
     if user.is_authenticated:
         history_id = user.id
     else:
         history_id = "anonymous"
 
-    history = conversation_manager.get_history(
-        history_id
-    )
+    history = conversation_manager.get_history(history_id)
 
-    ####################################################
-    # 7. Appel du LLM
-    ####################################################
+    # #### 5. LLM call
+    print("=== PROMPT ENVOYÉ AU LLM ===")
+    print(prompt)
 
     answer = ask_llm(
         question=prompt,
@@ -93,20 +72,7 @@ def ask_rag(user, question):
         history=history
     )
 
-    ####################################################
-    # 8. Sauvegarde mémoire
-    ####################################################
-
-    conversation_manager.add_message(
-        history_id,
-        "user",
-        question
-    )
-
-    conversation_manager.add_message(
-        history_id,
-        "assistant",
-        answer
-    )
+    conversation_manager.add_message(history_id, "user", question)
+    conversation_manager.add_message(history_id, "assistant", answer)
 
     return answer
