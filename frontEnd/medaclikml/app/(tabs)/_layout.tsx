@@ -36,6 +36,18 @@ export default function TabsLayout() {
         }}
       />
 
+            <Tabs.Screen
+        name="aiChat"
+        options={{
+          title: 'AI Chat',
+          headerShown: false,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="chatbubble-outline" size={24} color={color} />
+          ),
+        }}
+      />
+
+
       <Tabs.Screen
         name="profile"
         options={{
@@ -46,6 +58,17 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="aiChatList"
+        options={{
+          href: null,
+          
+          
+          
+        }}
+      />
+
        
     </Tabs>
 
